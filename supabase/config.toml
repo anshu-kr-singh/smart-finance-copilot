@@ -2,3 +2,6 @@ project_id = "kuqrgdgzdrayctptaixz"
 
 [functions.tax-agent]
 verify_jwt = false
+
+[functions.process-upload]
+verify_jwt = false
