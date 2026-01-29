@@ -1,17 +1,8 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AgentCard } from "@/components/dashboard/AgentCard";
-import { QueryInterface } from "@/components/dashboard/QueryInterface";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { ApprovalQueue } from "@/components/dashboard/ApprovalQueue";
-import { UploadCard } from "@/components/dashboard/UploadCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  IndianRupee,
-  FileCheck,
-  AlertTriangle,
-  TrendingUp,
   Receipt,
   Calculator,
   ClipboardCheck,
@@ -19,37 +10,6 @@ import {
   LineChart,
   BookOpen,
 } from "lucide-react";
-
-const stats = [
-  {
-    title: "Total Tax Saved",
-    value: "₹24.5L",
-    change: { value: 12, label: "vs last year" },
-    icon: IndianRupee,
-    variant: "primary" as const,
-  },
-  {
-    title: "Returns Filed",
-    value: "156",
-    change: { value: 8, label: "this quarter" },
-    icon: FileCheck,
-    variant: "success" as const,
-  },
-  {
-    title: "Pending Actions",
-    value: "7",
-    change: { value: -23, label: "vs last week" },
-    icon: AlertTriangle,
-    variant: "warning" as const,
-  },
-  {
-    title: "Compliance Score",
-    value: "98%",
-    change: { value: 3, label: "improvement" },
-    icon: TrendingUp,
-    variant: "accent" as const,
-  },
-];
 
 const agents = [
   {
@@ -114,7 +74,7 @@ const agents = [
   },
 ];
 
-export default function Index() {
+export default function Agents() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -127,53 +87,20 @@ export default function Index() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-            {/* Welcome Section */}
             <div className="mb-8">
               <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                Good Morning, Rahul 👋
+                AI Agents
               </h1>
               <p className="text-muted-foreground">
-                Your AI agents have been busy. Here's what needs your attention today.
+                Monitor and manage your AI-powered tax and accounting agents
               </p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.map((stat) => (
-                <StatsCard key={stat.title} {...stat} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {agents.map((agent) => (
+                <AgentCard key={agent.name} {...agent} />
               ))}
             </div>
-
-            {/* Query Interface */}
-            <QueryInterface />
-
-            {/* Agents Grid */}
-            <div>
-              <h2 className="text-xl font-display font-semibold text-foreground mb-4">
-                Your AI Agents
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {agents.map((agent) => (
-                  <AgentCard key={agent.name} {...agent} />
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Approval Queue */}
-              <div className="lg:col-span-2">
-                <ApprovalQueue />
-              </div>
-
-              {/* Upload Card */}
-              <div>
-                <UploadCard />
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <RecentActivity />
           </div>
         </main>
       </div>
