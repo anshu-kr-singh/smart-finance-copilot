@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Shield,
   TrendingUp,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 
 interface NavItem {
@@ -23,6 +25,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+  { icon: Building2, label: "Clients", href: "/clients" },
+  { icon: Briefcase, label: "Work", href: "/work" },
   { icon: Bot, label: "AI Agents", href: "/agents" },
   { icon: Upload, label: "Upload Data", href: "/upload" },
   { icon: MessageSquare, label: "Ask Query", href: "/query" },
