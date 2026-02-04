@@ -8,6 +8,30 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ReconciliationPanel } from "@/components/upload/ReconciliationPanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface Entry {
+  date?: string;
+  description?: string;
+  amount?: number;
+  type?: string;
+  reference?: string;
+  party?: string;
+}
 
 interface UploadedFile {
   id: string;
@@ -21,6 +45,8 @@ interface UploadedFile {
     totalAmount?: string;
     period?: string;
     type?: string;
+    summary?: string;
+    entries?: Entry[];
   };
   error?: string;
 }
@@ -36,6 +62,7 @@ export default function UploadPage() {
   const location = useLocation();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
 
   const processFile = useCallback(async (file: File) => {
     const fileId = Math.random().toString(36).substr(2, 9);
@@ -132,6 +159,26 @@ export default function UploadPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const formatAmount = (amount?: number) => {
+    if (amount === undefined) return "-";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Get completed files for reconciliation
+  const completedFiles = files
+    .filter(f => f.status === "completed" && f.result?.entries)
+    .map(f => ({
+      id: f.id,
+      name: f.name,
+      type: f.result?.type || "Unknown",
+      entries: f.result?.entries || [],
+      totalAmount: f.result?.totalAmount || "₹0",
+    }));
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar activeItem={location.pathname} onNavigate={(href) => navigate(href)} />
@@ -143,10 +190,10 @@ export default function UploadPage() {
           <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
             <div className="mb-8">
               <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                Upload Data
+                Upload & Reconcile Data
               </h1>
               <p className="text-muted-foreground">
-                Upload bank statements, invoices, ledgers, or ERP exports for AI processing
+                Upload files for AI-powered analysis and data reconciliation
               </p>
             </div>
 
@@ -241,11 +288,11 @@ export default function UploadPage() {
                         <p className="font-medium text-foreground truncate">{file.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {formatFileSize(file.size)}
-                          {file.status === "processing" && " • Processing..."}
+                          {file.status === "processing" && " • AI Processing..."}
                           {file.status === "completed" && file.result && (
                             <span className="text-success">
                               {" • "}
-                              {file.result.transactions} transactions found
+                              {file.result.transactions} entries • {file.result.type}
                               {file.result.totalAmount && ` • ${file.result.totalAmount}`}
                             </span>
                           )}
@@ -262,8 +309,12 @@ export default function UploadPage() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2">
-                        {file.status === "completed" && (
-                          <Button variant="ghost" size="icon">
+                        {file.status === "completed" && file.result?.entries && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setPreviewFile(file)}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                         )}
@@ -281,7 +332,33 @@ export default function UploadPage() {
               </Card>
             )}
 
-            {/* Processing Summary */}
+            {/* AI Summary for completed files */}
+            {files.some(f => f.status === "completed" && f.result?.summary) && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    AI Analysis Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {files
+                    .filter(f => f.status === "completed" && f.result?.summary)
+                    .map(file => (
+                      <div key={file.id} className="p-3 rounded-lg bg-background/50">
+                        <p className="font-medium text-sm mb-1">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">{file.result?.summary}</p>
+                      </div>
+                    ))
+                  }
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Reconciliation Panel */}
+            <ReconciliationPanel files={completedFiles} />
+
+            {/* Quick Actions */}
             {files.some(f => f.status === "completed") && (
               <Card className="border-success/30 bg-success/5">
                 <CardContent className="p-6">
@@ -292,11 +369,11 @@ export default function UploadPage() {
                     <div>
                       <h3 className="font-semibold text-foreground">Files Processed Successfully</h3>
                       <p className="text-sm text-muted-foreground">
-                        {files.filter(f => f.status === "completed").length} file(s) have been processed and are ready for agent analysis
+                        {files.filter(f => f.status === "completed").length} file(s) ready for analysis
                       </p>
                     </div>
                     <Button className="ml-auto" onClick={() => navigate("/query")}>
-                      Ask Questions
+                      Ask AI Questions
                     </Button>
                   </div>
                 </CardContent>
@@ -305,6 +382,50 @@ export default function UploadPage() {
           </div>
         </main>
       </div>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewFile?.name} - Extracted Data</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {previewFile?.result?.entries && previewFile.result.entries.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Party</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewFile.result.entries.slice(0, 50).map((entry, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-mono text-sm">{entry.date || "-"}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{entry.description || "-"}</TableCell>
+                      <TableCell>{entry.party || "-"}</TableCell>
+                      <TableCell className="font-mono text-sm">{entry.reference || "-"}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatAmount(entry.amount)}</TableCell>
+                      <TableCell>{entry.type || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center py-8 text-muted-foreground">No entries extracted</p>
+            )}
+            {previewFile?.result?.entries && previewFile.result.entries.length > 50 && (
+              <p className="text-center py-4 text-sm text-muted-foreground">
+                Showing first 50 of {previewFile.result.entries.length} entries
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
