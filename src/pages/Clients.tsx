@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActivityLog } from "@/hooks/useActivityLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ interface Client {
 export default function ClientsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logActivity } = useActivityLog();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -79,17 +81,21 @@ export default function ClientsPage() {
         toast.error("Failed to update client");
       } else {
         toast.success("Client updated!");
+        await logActivity("update", "client", editingClient.id, { name: formData.company_name });
         fetchClients();
       }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("clients")
-        .insert({ ...formData, user_id: user.id });
+        .insert({ ...formData, user_id: user.id })
+        .select()
+        .single();
       
       if (error) {
         toast.error("Failed to add client");
       } else {
         toast.success("Client added!");
+        await logActivity("create", "client", data.id, { name: formData.company_name });
         fetchClients();
       }
     }
@@ -99,6 +105,7 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    const client = clients.find(c => c.id === id);
     if (!confirm("Delete this client? All related work will be deleted.")) return;
     
     const { error } = await supabase.from("clients").delete().eq("id", id);
@@ -106,6 +113,7 @@ export default function ClientsPage() {
       toast.error("Failed to delete client");
     } else {
       toast.success("Client deleted");
+      await logActivity("delete", "client", id, { name: client?.company_name });
       fetchClients();
     }
   };

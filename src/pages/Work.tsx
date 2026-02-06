@@ -3,6 +3,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +62,8 @@ export default function WorkPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const clientFilter = searchParams.get("client");
+  const { logActivity } = useActivityLog();
+  const { createNotification } = useNotifications();
   
   const [clients, setClients] = useState<Client[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -100,19 +104,27 @@ export default function WorkPage() {
       return;
     }
 
-    const { error } = await supabase.from("work_items").insert([{
+    const { data, error } = await supabase.from("work_items").insert([{
       user_id: user.id,
       client_id: formData.client_id,
       category: formData.category as WorkCategory,
       title: formData.title,
       description: formData.description || null,
       due_date: formData.due_date || null
-    }]);
+    }]).select().single();
     
     if (error) {
       toast.error("Failed to create work item");
     } else {
       toast.success("Work item created!");
+      await logActivity("create", "work_item", data.id, { name: formData.title, category: formData.category });
+      await createNotification(
+        "Work Item Created",
+        `New ${categoryConfig[formData.category as WorkCategory]?.label || formData.category} work item: ${formData.title}`,
+        "info",
+        "work_item",
+        data.id
+      );
       fetchData();
       setDialogOpen(false);
       setFormData({ client_id: clientFilter || "", category: "", title: "", description: "", due_date: "" });
@@ -120,6 +132,7 @@ export default function WorkPage() {
   };
 
   const updateStatus = async (id: string, status: WorkStatus) => {
+    const item = workItems.find(w => w.id === id);
     const updates: any = { status };
     if (status === "completed" || status === "filed") {
       updates.completed_at = new Date().toISOString();
@@ -129,11 +142,24 @@ export default function WorkPage() {
     if (error) {
       toast.error("Failed to update status");
     } else {
+      if (item) {
+        await logActivity("update", "work_item", id, { name: item.title, status });
+        if (status === "completed" || status === "filed") {
+          await createNotification(
+            `Work Item ${status === "filed" ? "Filed" : "Completed"}`,
+            `${item.title} has been marked as ${status}.`,
+            "success",
+            "work_item",
+            id
+          );
+        }
+      }
       fetchData();
     }
   };
 
   const handleDownloadPDF = async (item: WorkItem) => {
+    await logActivity("download", "report", item.id, { name: item.title });
     toast.promise(
       generateWorkPDF(item, item.clients.company_name),
       {

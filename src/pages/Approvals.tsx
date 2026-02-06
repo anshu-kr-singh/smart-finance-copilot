@@ -1,118 +1,138 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle2, XCircle, Eye, Clock, AlertTriangle, FileText, Receipt, Calculator } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { useNotifications } from "@/hooks/useNotifications";
+import { CheckCircle2, XCircle, Eye, Clock, AlertTriangle, FileText, Receipt, Calculator, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { formatRelativeTime } from "@/hooks/useActivityLog";
 
-interface ApprovalItem {
+interface WorkItem {
   id: string;
   title: string;
-  description: string;
-  type: "gstr" | "itr" | "journal" | "compliance";
-  agent: string;
-  priority: "high" | "medium" | "low";
-  createdAt: string;
-  dueDate: string;
-  status: "pending" | "approved" | "rejected";
-  details?: {
-    amount?: string;
-    period?: string;
-    entries?: number;
-  };
+  description: string | null;
+  category: string;
+  status: string;
+  due_date: string | null;
+  created_at: string;
+  clients: { company_name: string };
 }
 
-const initialApprovals: ApprovalItem[] = [
-  {
-    id: "1",
-    title: "GSTR-3B Draft - December 2024",
-    description: "Monthly GST return ready for review and filing",
-    type: "gstr",
-    agent: "GST Agent",
-    priority: "high",
-    createdAt: "2 hours ago",
-    dueDate: "Jan 20, 2025",
-    status: "pending",
-    details: { amount: "₹2,45,000", period: "Dec 2024", entries: 156 },
-  },
-  {
-    id: "2",
-    title: "ITC Reconciliation Report",
-    description: "Mismatch found between GSTR-2B and purchase register",
-    type: "gstr",
-    agent: "GST Agent",
-    priority: "high",
-    createdAt: "4 hours ago",
-    dueDate: "Jan 18, 2025",
-    status: "pending",
-    details: { amount: "₹45,230", entries: 12 },
-  },
-  {
-    id: "3",
-    title: "Advance Tax Computation - Q3",
-    description: "Quarterly advance tax calculation based on current income",
-    type: "itr",
-    agent: "Income Tax Agent",
-    priority: "medium",
-    createdAt: "Yesterday",
-    dueDate: "Jan 15, 2025",
-    status: "pending",
-    details: { amount: "₹1,25,000", period: "Q3 FY24-25" },
-  },
-  {
-    id: "4",
-    title: "Journal Entries - Bank Reconciliation",
-    description: "Auto-classified transactions from HDFC bank statement",
-    type: "journal",
-    agent: "Accounting Agent",
-    priority: "low",
-    createdAt: "2 days ago",
-    dueDate: "Jan 25, 2025",
-    status: "pending",
-    details: { entries: 89, amount: "₹15,67,000" },
-  },
-];
-
-const typeConfig = {
-  gstr: { icon: Receipt, color: "text-orange-500", bg: "bg-orange-500/10" },
-  itr: { icon: Calculator, color: "text-blue-500", bg: "bg-blue-500/10" },
-  journal: { icon: FileText, color: "text-purple-500", bg: "bg-purple-500/10" },
-  compliance: { icon: AlertTriangle, color: "text-green-500", bg: "bg-green-500/10" },
-};
-
-const priorityConfig = {
-  high: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30" },
-  medium: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30" },
-  low: { color: "text-muted-foreground", bg: "bg-secondary", border: "border-border" },
+const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: string }> = {
+  gst: { icon: Receipt, color: "text-orange-500", bg: "bg-orange-500/10" },
+  income_tax: { icon: Calculator, color: "text-blue-500", bg: "bg-blue-500/10" },
+  accounting: { icon: FileText, color: "text-purple-500", bg: "bg-purple-500/10" },
+  audit: { icon: AlertTriangle, color: "text-green-500", bg: "bg-green-500/10" },
+  compliance: { icon: FileText, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+  fpa: { icon: FileText, color: "text-amber-500", bg: "bg-amber-500/10" },
+  risk: { icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+  advisory: { icon: FileText, color: "text-indigo-500", bg: "bg-indigo-500/10" },
 };
 
 export default function ApprovalsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [approvals, setApprovals] = useState(initialApprovals);
-  const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
+  const { user } = useAuth();
+  const { logActivity } = useActivityLog();
+  const { createNotification } = useNotifications();
+  const [approvals, setApprovals] = useState<WorkItem[]>([]);
+  const [completedApprovals, setCompletedApprovals] = useState<{ id: string; status: string; title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleApprove = (id: string) => {
-    setApprovals(prev => prev.map(item => 
-      item.id === id ? { ...item, status: "approved" as const } : item
-    ));
-    toast.success("Approved successfully! The agent will proceed with filing.");
-    setSelectedItem(null);
+  useEffect(() => {
+    if (user) {
+      fetchApprovals();
+    }
+  }, [user]);
+
+  const fetchApprovals = async () => {
+    const { data, error } = await supabase
+      .from("work_items")
+      .select("*, clients(company_name)")
+      .eq("status", "review")
+      .order("created_at", { ascending: false });
+    
+    if (data) {
+      setApprovals(data as WorkItem[]);
+    }
+    setLoading(false);
   };
 
-  const handleReject = (id: string) => {
-    setApprovals(prev => prev.map(item => 
-      item.id === id ? { ...item, status: "rejected" as const } : item
-    ));
-    toast.info("Rejected. The agent will revise the draft.");
-    setSelectedItem(null);
+  const handleApprove = async (item: WorkItem) => {
+    const { error } = await supabase
+      .from("work_items")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", item.id);
+    
+    if (error) {
+      toast.error("Failed to approve");
+    } else {
+      toast.success("Approved successfully!");
+      setCompletedApprovals(prev => [...prev, { id: item.id, status: "approved", title: item.title }]);
+      await logActivity("complete", "work_item", item.id, { name: item.title, action: "approved" });
+      await createNotification(
+        "Work Item Approved",
+        `${item.title} has been approved and marked as completed.`,
+        "success",
+        "work_item",
+        item.id
+      );
+      fetchApprovals();
+    }
   };
 
-  const pendingCount = approvals.filter(a => a.status === "pending").length;
+  const handleReject = async (item: WorkItem) => {
+    const { error } = await supabase
+      .from("work_items")
+      .update({ status: "in_progress" })
+      .eq("id", item.id);
+    
+    if (error) {
+      toast.error("Failed to send back for revision");
+    } else {
+      toast.info("Sent back for revision");
+      setCompletedApprovals(prev => [...prev, { id: item.id, status: "rejected", title: item.title }]);
+      await logActivity("update", "work_item", item.id, { name: item.title, action: "sent_back" });
+      await createNotification(
+        "Work Item Needs Revision",
+        `${item.title} has been sent back for revision.`,
+        "warning",
+        "work_item",
+        item.id
+      );
+      fetchApprovals();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar activeItem={location.pathname} onNavigate={(href) => navigate(href)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const pendingCount = approvals.length;
+  const approvedCount = completedApprovals.filter(a => a.status === "approved").length;
+  const rejectedCount = completedApprovals.filter(a => a.status === "rejected").length;
+  const highPriorityCount = approvals.filter(a => {
+    if (!a.due_date) return false;
+    const daysLeft = Math.ceil((new Date(a.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysLeft <= 7;
+  }).length;
 
   return (
     <div className="flex h-screen bg-background">
@@ -152,9 +172,7 @@ export default function ApprovalsPage() {
                     <CheckCircle2 className="w-5 h-5 text-success" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {approvals.filter(a => a.status === "approved").length}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{approvedCount}</p>
                     <p className="text-sm text-muted-foreground">Approved</p>
                   </div>
                 </CardContent>
@@ -165,10 +183,8 @@ export default function ApprovalsPage() {
                     <XCircle className="w-5 h-5 text-destructive" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {approvals.filter(a => a.status === "rejected").length}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Rejected</p>
+                    <p className="text-2xl font-bold text-foreground">{rejectedCount}</p>
+                    <p className="text-sm text-muted-foreground">Sent Back</p>
                   </div>
                 </CardContent>
               </Card>
@@ -178,10 +194,8 @@ export default function ApprovalsPage() {
                     <AlertTriangle className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {approvals.filter(a => a.priority === "high" && a.status === "pending").length}
-                    </p>
-                    <p className="text-sm text-muted-foreground">High Priority</p>
+                    <p className="text-2xl font-bold text-foreground">{highPriorityCount}</p>
+                    <p className="text-sm text-muted-foreground">Urgent</p>
                   </div>
                 </CardContent>
               </Card>
@@ -193,123 +207,114 @@ export default function ApprovalsPage() {
                 <CardTitle>Pending Approvals</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {approvals.filter(a => a.status === "pending").length === 0 ? (
+                {approvals.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-success" />
-                    <p>All caught up! No pending approvals.</p>
+                    <p className="font-medium">All caught up!</p>
+                    <p className="text-sm">No pending approvals. Work items in "Review" status will appear here.</p>
                   </div>
                 ) : (
-                  approvals
-                    .filter(a => a.status === "pending")
-                    .map((item) => {
-                      const TypeIcon = typeConfig[item.type].icon;
-                      return (
-                        <div
-                          key={item.id}
-                          className={cn(
-                            "flex items-center gap-4 p-4 rounded-lg border transition-all",
-                            priorityConfig[item.priority].border,
-                            "bg-card hover:bg-secondary/30"
-                          )}
-                        >
-                          {/* Type Icon */}
-                          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", typeConfig[item.type].bg)}>
-                            <TypeIcon className={cn("w-5 h-5", typeConfig[item.type].color)} />
-                          </div>
+                  approvals.map((item) => {
+                    const config = typeConfig[item.category] || typeConfig.accounting;
+                    const TypeIcon = config.icon;
+                    const daysLeft = item.due_date 
+                      ? Math.ceil((new Date(item.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                      : null;
+                    const isUrgent = daysLeft !== null && daysLeft <= 7;
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "flex items-center gap-4 p-4 rounded-lg border transition-all",
+                          isUrgent ? "border-warning/30" : "border-border",
+                          "bg-card hover:bg-secondary/30"
+                        )}
+                      >
+                        {/* Type Icon */}
+                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", config.bg)}>
+                          <TypeIcon className={cn("w-5 h-5", config.color)} />
+                        </div>
 
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium text-foreground truncate">{item.title}</h4>
-                              <Badge variant={item.priority === "high" ? "destructive" : "secondary"} className="text-xs">
-                                {item.priority}
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-foreground truncate">{item.title}</h4>
+                            {isUrgent && (
+                              <Badge variant="destructive" className="text-xs">
+                                Urgent
                               </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">{item.description}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span>By {item.agent}</span>
-                              <span>•</span>
-                              <span>{item.createdAt}</span>
-                              <span>•</span>
-                              <span className={cn(item.priority === "high" && "text-destructive")}>
-                                Due: {item.dueDate}
-                              </span>
-                            </div>
+                            )}
                           </div>
-
-                          {/* Details */}
-                          {item.details && (
-                            <div className="hidden md:flex items-center gap-4 text-sm">
-                              {item.details.amount && (
-                                <div className="text-right">
-                                  <p className="font-semibold text-foreground">{item.details.amount}</p>
-                                  <p className="text-xs text-muted-foreground">Amount</p>
-                                </div>
-                              )}
-                              {item.details.entries && (
-                                <div className="text-right">
-                                  <p className="font-semibold text-foreground">{item.details.entries}</p>
-                                  <p className="text-xs text-muted-foreground">Entries</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedItem(item)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                              onClick={() => handleReject(item.id)}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="bg-success hover:bg-success/90"
-                              onClick={() => handleApprove(item.id)}
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
+                          <p className="text-sm text-muted-foreground truncate">{item.description || "No description"}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{item.clients?.company_name}</span>
+                            <span>•</span>
+                            <span>{formatRelativeTime(item.created_at)}</span>
+                            {item.due_date && (
+                              <>
+                                <span>•</span>
+                                <span className={cn(isUrgent && "text-destructive")}>
+                                  Due: {new Date(item.due_date).toLocaleDateString("en-IN")}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
-                      );
-                    })
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/work/${item.id}`)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={() => handleReject(item)}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Send Back
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-success hover:bg-success/90"
+                            onClick={() => handleApprove(item)}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
 
             {/* Completed Approvals */}
-            {approvals.filter(a => a.status !== "pending").length > 0 && (
+            {completedApprovals.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Completed</CardTitle>
+                  <CardTitle className="text-lg">Session Activity</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {approvals
-                    .filter(a => a.status !== "pending")
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30"
-                      >
-                        {item.status === "approved" ? (
-                          <CheckCircle2 className="w-5 h-5 text-success" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-destructive" />
-                        )}
-                        <span className="flex-1 text-sm text-muted-foreground">{item.title}</span>
-                        <Badge variant={item.status === "approved" ? "default" : "destructive"}>
-                          {item.status}
-                        </Badge>
-                      </div>
-                    ))}
+                  {completedApprovals.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30"
+                    >
+                      {item.status === "approved" ? (
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-warning" />
+                      )}
+                      <span className="flex-1 text-sm text-muted-foreground">{item.title}</span>
+                      <Badge variant={item.status === "approved" ? "default" : "secondary"}>
+                        {item.status === "approved" ? "Approved" : "Sent Back"}
+                      </Badge>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}

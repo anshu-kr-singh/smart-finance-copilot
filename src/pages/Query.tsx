@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useActivityLog } from "@/hooks/useActivityLog";
 import { Send, Bot, User, Loader2, Sparkles, Receipt, Calculator, ClipboardCheck, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,7 @@ const suggestedQueries = [
 export default function QueryPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logActivity } = useActivityLog();
   const [query, setQuery] = useState("");
   const [selectedAgent, setSelectedAgent] = useState<string>("general");
   const { messages, isLoading, sendMessage, clearMessages } = useTaxAgent();
@@ -39,11 +41,13 @@ export default function QueryPage() {
     
     const message = query;
     setQuery("");
+    await logActivity("query", "ai_agent", undefined, { query: message, agent: selectedAgent });
     await sendMessage(message, selectedAgent as any);
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
     setQuery("");
+    await logActivity("query", "ai_agent", undefined, { query: suggestion, agent: selectedAgent });
     await sendMessage(suggestion, selectedAgent as any);
   };
 
@@ -59,7 +63,7 @@ export default function QueryPage() {
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                Ask Query
+                Ask AI Agent
               </h1>
               <p className="text-muted-foreground">
                 Ask any tax, GST, or accounting question in natural language

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useActivityLog } from "@/hooks/useActivityLog";
 import { Upload, FileSpreadsheet, FileText, Database, CheckCircle2, Loader2, AlertCircle, X, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ const supportedFormats = [
 export default function UploadPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logActivity } = useActivityLog();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
@@ -121,6 +123,13 @@ export default function UploadPage() {
         } : f
       ));
 
+      // Log the upload activity
+      await logActivity("upload", "document", undefined, { 
+        name: file.name, 
+        type: result.data?.type,
+        entries: result.data?.transactions 
+      });
+
       toast.success(`${file.name} processed successfully!`);
     } catch (error) {
       console.error("Processing error:", error);
@@ -133,7 +142,7 @@ export default function UploadPage() {
       ));
       toast.error(`Failed to process ${file.name}`);
     }
-  }, []);
+  }, [logActivity]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

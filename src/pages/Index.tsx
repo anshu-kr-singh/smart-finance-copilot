@@ -3,10 +3,12 @@ import { Header } from "@/components/layout/Header";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AgentCard } from "@/components/dashboard/AgentCard";
 import { QueryInterface } from "@/components/dashboard/QueryInterface";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ApprovalQueue } from "@/components/dashboard/ApprovalQueue";
 import { UploadCard } from "@/components/dashboard/UploadCard";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import {
   IndianRupee,
   FileCheck,
@@ -18,48 +20,19 @@ import {
   Building2,
   LineChart,
   BookOpen,
+  Users,
+  Briefcase,
 } from "lucide-react";
-
-const stats = [
-  {
-    title: "Total Tax Saved",
-    value: "₹24.5L",
-    change: { value: 12, label: "vs last year" },
-    icon: IndianRupee,
-    variant: "primary" as const,
-  },
-  {
-    title: "Returns Filed",
-    value: "156",
-    change: { value: 8, label: "this quarter" },
-    icon: FileCheck,
-    variant: "success" as const,
-  },
-  {
-    title: "Pending Actions",
-    value: "7",
-    change: { value: -23, label: "vs last week" },
-    icon: AlertTriangle,
-    variant: "warning" as const,
-  },
-  {
-    title: "Compliance Score",
-    value: "98%",
-    change: { value: 3, label: "improvement" },
-    icon: TrendingUp,
-    variant: "accent" as const,
-  },
-];
 
 const agents = [
   {
     name: "GST Agent",
     description: "GSTR-1, 2B matching, ITC reconciliation, and return filing automation",
     icon: Receipt,
-    status: "processing" as const,
-    tasksCompleted: 8,
-    tasksTotal: 12,
-    lastRun: "5 min ago",
+    status: "active" as const,
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "gst" as const,
   },
   {
@@ -67,9 +40,9 @@ const agents = [
     description: "AIS reconciliation, tax computation, ITR draft generation",
     icon: Calculator,
     status: "active" as const,
-    tasksCompleted: 15,
-    tasksTotal: 15,
-    lastRun: "2 hours ago",
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "tax" as const,
   },
   {
@@ -78,18 +51,18 @@ const agents = [
     icon: ClipboardCheck,
     status: "idle" as const,
     tasksCompleted: 0,
-    tasksTotal: 5,
-    lastRun: "Yesterday",
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "audit" as const,
   },
   {
     name: "Compliance & ROC",
     description: "Deadline tracking, form drafting, regulatory compliance",
     icon: Building2,
-    status: "alert" as const,
-    tasksCompleted: 3,
-    tasksTotal: 4,
-    lastRun: "30 min ago",
+    status: "idle" as const,
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "compliance" as const,
   },
   {
@@ -97,9 +70,9 @@ const agents = [
     description: "Transaction classification, journal entries, reconciliation",
     icon: BookOpen,
     status: "active" as const,
-    tasksCompleted: 142,
-    tasksTotal: 150,
-    lastRun: "1 hour ago",
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "accounting" as const,
   },
   {
@@ -107,9 +80,9 @@ const agents = [
     description: "Budget analysis, forecasting, scenario planning, insights",
     icon: LineChart,
     status: "idle" as const,
-    tasksCompleted: 2,
-    tasksTotal: 3,
-    lastRun: "3 days ago",
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    lastRun: "Ready",
     variant: "advisory" as const,
   },
 ];
@@ -117,6 +90,39 @@ const agents = [
 export default function Index() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getGreeting, getFirstName } = useProfile();
+  const { stats, loading: statsLoading, formatCurrency } = useDashboardStats();
+
+  const dynamicStats = [
+    {
+      title: "Total Clients",
+      value: stats?.totalClients?.toString() || "0",
+      change: { value: 0, label: "managed" },
+      icon: Users,
+      variant: "primary" as const,
+    },
+    {
+      title: "Active Work Items",
+      value: stats?.activeWorkItems?.toString() || "0",
+      change: { value: stats?.completedThisMonth || 0, label: "completed this month" },
+      icon: FileCheck,
+      variant: "success" as const,
+    },
+    {
+      title: "Pending Approvals",
+      value: stats?.pendingApprovals?.toString() || "0",
+      change: { value: 0, label: "require attention" },
+      icon: AlertTriangle,
+      variant: "warning" as const,
+    },
+    {
+      title: "Compliance Score",
+      value: `${stats?.complianceScore || 100}%`,
+      change: { value: 0, label: "on track" },
+      icon: TrendingUp,
+      variant: "accent" as const,
+    },
+  ];
 
   return (
     <div className="flex h-screen bg-background">
@@ -130,19 +136,62 @@ export default function Index() {
             {/* Welcome Section */}
             <div className="mb-8">
               <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                Good Morning, Rahul 👋
+                {getGreeting()}, {getFirstName()} 👋
               </h1>
               <p className="text-muted-foreground">
-                Your AI agents have been busy. Here's what needs your attention today.
+                Your AI agents are ready to help. Here's an overview of your practice.
               </p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.map((stat) => (
+              {dynamicStats.map((stat) => (
                 <StatsCard key={stat.title} {...stat} />
               ))}
             </div>
+
+            {/* Tax Summary Cards */}
+            {stats && (stats.gstReturns.totalTax > 0 || stats.incomeTax.totalLiability > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg border border-border bg-card">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Receipt className="w-5 h-5 text-orange-500" />
+                    <span className="font-semibold">GST Summary</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Filed</p>
+                      <p className="text-lg font-bold text-success">{stats.gstReturns.filed}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Pending</p>
+                      <p className="text-lg font-bold text-warning">{stats.gstReturns.pending}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Tax</p>
+                      <p className="text-lg font-bold">{formatCurrency(stats.gstReturns.totalTax)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-lg border border-border bg-card">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Calculator className="w-5 h-5 text-green-500" />
+                    <span className="font-semibold">Income Tax Summary</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Computations</p>
+                      <p className="text-lg font-bold">{stats.incomeTax.computations}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Liability</p>
+                      <p className="text-lg font-bold">{formatCurrency(stats.incomeTax.totalLiability)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Query Interface */}
             <QueryInterface />
@@ -172,8 +221,8 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <RecentActivity />
+            {/* Recent Activity - Real-time */}
+            <ActivityFeed maxItems={10} />
           </div>
         </main>
       </div>
