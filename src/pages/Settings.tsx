@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Settings as SettingsIcon, User, Bell, Shield, Database, Palette, Save } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { User, Bell, Shield, Database, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,23 +17,68 @@ import { toast } from "sonner";
 export default function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const { logActivity } = useActivityLog();
   
-  const [settings, setSettings] = useState({
-    name: "Rahul Sharma",
-    email: "rahul@example.com",
-    firm: "Sharma & Associates",
-    gstin: "27AABCU9603R1ZM",
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    firm_name: "",
+    membership_number: "",
+    phone: "",
+  });
+
+  const [notifications, setNotifications] = useState({
     emailNotifications: true,
     pushNotifications: true,
     deadlineReminders: true,
     agentAlerts: true,
-    autoApproval: false,
-    darkMode: true,
   });
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully!");
+  const [security, setSecurity] = useState({
+    autoApproval: false,
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        firm_name: profile.firm_name || "",
+        membership_number: profile.membership_number || "",
+        phone: profile.phone || "",
+      });
+    }
+  }, [profile]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    
+    const { error } = await updateProfile(formData);
+    
+    if (error) {
+      toast.error("Failed to save settings");
+    } else {
+      toast.success("Settings saved successfully!");
+      await logActivity("update", "profile", profile?.id, { name: formData.full_name });
+    }
+    
+    setSaving(false);
   };
+
+  if (profileLoading) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar activeItem={location.pathname} onNavigate={(href) => navigate(href)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -66,8 +114,8 @@ export default function SettingsPage() {
                     <Label htmlFor="name">Full Name</Label>
                     <Input 
                       id="name" 
-                      value={settings.name}
-                      onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -75,24 +123,37 @@ export default function SettingsPage() {
                     <Input 
                       id="email" 
                       type="email"
-                      value={settings.email}
-                      onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                      value={user?.email || ""}
+                      disabled
+                      className="bg-muted"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="firm">Firm Name</Label>
                     <Input 
                       id="firm" 
-                      value={settings.firm}
-                      onChange={(e) => setSettings({ ...settings, firm: e.target.value })}
+                      value={formData.firm_name}
+                      onChange={(e) => setFormData({ ...formData, firm_name: e.target.value })}
+                      placeholder="Your CA firm name"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gstin">GSTIN</Label>
+                    <Label htmlFor="membership">Membership Number</Label>
                     <Input 
-                      id="gstin" 
-                      value={settings.gstin}
-                      onChange={(e) => setSettings({ ...settings, gstin: e.target.value })}
+                      id="membership" 
+                      value={formData.membership_number}
+                      onChange={(e) => setFormData({ ...formData, membership_number: e.target.value })}
+                      placeholder="ICAI membership number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input 
+                      id="phone" 
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+91 98765 43210"
                     />
                   </div>
                 </div>
@@ -115,8 +176,8 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Receive updates via email</p>
                   </div>
                   <Switch 
-                    checked={settings.emailNotifications}
-                    onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
+                    checked={notifications.emailNotifications}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, emailNotifications: checked })}
                   />
                 </div>
                 <Separator />
@@ -126,8 +187,8 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Browser push notifications</p>
                   </div>
                   <Switch 
-                    checked={settings.pushNotifications}
-                    onCheckedChange={(checked) => setSettings({ ...settings, pushNotifications: checked })}
+                    checked={notifications.pushNotifications}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, pushNotifications: checked })}
                   />
                 </div>
                 <Separator />
@@ -137,8 +198,8 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Get reminded before compliance deadlines</p>
                   </div>
                   <Switch 
-                    checked={settings.deadlineReminders}
-                    onCheckedChange={(checked) => setSettings({ ...settings, deadlineReminders: checked })}
+                    checked={notifications.deadlineReminders}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, deadlineReminders: checked })}
                   />
                 </div>
                 <Separator />
@@ -148,8 +209,8 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Notifications when agents complete tasks</p>
                   </div>
                   <Switch 
-                    checked={settings.agentAlerts}
-                    onCheckedChange={(checked) => setSettings({ ...settings, agentAlerts: checked })}
+                    checked={notifications.agentAlerts}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, agentAlerts: checked })}
                   />
                 </div>
               </CardContent>
@@ -168,11 +229,11 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">Auto-Approval for Low Risk</p>
-                    <p className="text-sm text-muted-foreground">Allow agents to auto-file low-risk returns</p>
+                    <p className="text-sm text-muted-foreground">Allow agents to auto-file low-risk returns (requires CA review)</p>
                   </div>
                   <Switch 
-                    checked={settings.autoApproval}
-                    onCheckedChange={(checked) => setSettings({ ...settings, autoApproval: checked })}
+                    checked={security.autoApproval}
+                    onCheckedChange={(checked) => setSecurity({ ...security, autoApproval: checked })}
                   />
                 </div>
                 <Separator />
@@ -198,10 +259,17 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-foreground">Storage Used</p>
-                    <p className="text-sm text-muted-foreground">2.4 GB of 10 GB</p>
+                    <p className="font-medium text-foreground">Account Created</p>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.created_at 
+                        ? new Date(profile.created_at).toLocaleDateString("en-IN", { 
+                            day: "numeric", 
+                            month: "long", 
+                            year: "numeric" 
+                          })
+                        : "Unknown"}
+                    </p>
                   </div>
-                  <Button variant="outline" size="sm">Manage</Button>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -216,8 +284,12 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end">
-              <Button onClick={handleSave} className="gap-2">
-                <Save className="w-4 h-4" />
+              <Button onClick={handleSave} className="gap-2" disabled={saving}>
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Save Changes
               </Button>
             </div>

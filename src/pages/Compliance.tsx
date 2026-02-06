@@ -1,76 +1,147 @@
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Shield, AlertTriangle, CheckCircle2, Clock, Calendar, FileCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Shield, AlertTriangle, CheckCircle2, Clock, Calendar, FileCheck, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/hooks/useActivityLog";
 
-const upcomingDeadlines = [
-  {
-    id: "1",
-    title: "GSTR-3B Filing",
-    dueDate: "Jan 20, 2025",
-    daysLeft: 5,
-    status: "pending",
-    priority: "high",
-  },
-  {
-    id: "2",
-    title: "Advance Tax Q4",
-    dueDate: "Mar 15, 2025",
-    daysLeft: 59,
-    status: "upcoming",
-    priority: "medium",
-  },
-  {
-    id: "3",
-    title: "TDS Return Q3",
-    dueDate: "Jan 31, 2025",
-    daysLeft: 16,
-    status: "pending",
-    priority: "high",
-  },
-  {
-    id: "4",
-    title: "Annual ROC Filing",
-    dueDate: "Feb 28, 2025",
-    daysLeft: 44,
-    status: "upcoming",
-    priority: "medium",
-  },
-  {
-    id: "5",
-    title: "GSTR-1 Filing",
-    dueDate: "Jan 11, 2025",
-    daysLeft: -4,
-    status: "overdue",
-    priority: "critical",
-  },
-];
+interface ComplianceTask {
+  id: string;
+  task_type: string;
+  form_number: string | null;
+  due_date: string | null;
+  filed_date: string | null;
+  srn: string | null;
+  work_item_id: string;
+  work_items: { 
+    title: string; 
+    status: string;
+    clients: { company_name: string } 
+  };
+}
 
-const complianceAreas = [
-  { name: "GST Compliance", score: 95, status: "good" },
-  { name: "Income Tax", score: 100, status: "excellent" },
-  { name: "TDS Compliance", score: 88, status: "good" },
-  { name: "ROC Filings", score: 75, status: "attention" },
-];
-
-const recentFilings = [
-  { title: "GSTR-1 November 2024", date: "Dec 11, 2024", status: "filed" },
-  { title: "GSTR-3B November 2024", date: "Dec 20, 2024", status: "filed" },
-  { title: "TDS Return Q2", date: "Oct 31, 2024", status: "filed" },
-  { title: "Advance Tax Q3", date: "Dec 15, 2024", status: "filed" },
-];
+interface WorkItem {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  due_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  clients: { company_name: string };
+}
 
 export default function CompliancePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [complianceTasks, setComplianceTasks] = useState<ComplianceTask[]>([]);
 
-  const overallScore = Math.round(
-    complianceAreas.reduce((acc, area) => acc + area.score, 0) / complianceAreas.length
-  );
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    const [workRes, complianceRes] = await Promise.all([
+      supabase
+        .from("work_items")
+        .select("*, clients(company_name)")
+        .in("category", ["gst", "income_tax", "compliance"])
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("compliance_tasks")
+        .select("*, work_items(title, status, clients(company_name))")
+        .order("due_date", { ascending: true })
+    ]);
+    
+    if (workRes.data) setWorkItems(workRes.data as WorkItem[]);
+    if (complianceRes.data) setComplianceTasks(complianceRes.data as ComplianceTask[]);
+    setLoading(false);
+  };
+
+  // Calculate compliance scores
+  const calculateScores = () => {
+    const byCategory: Record<string, { total: number; completed: number }> = {
+      gst: { total: 0, completed: 0 },
+      income_tax: { total: 0, completed: 0 },
+      compliance: { total: 0, completed: 0 },
+    };
+
+    workItems.forEach(item => {
+      if (byCategory[item.category]) {
+        byCategory[item.category].total++;
+        if (item.status === "completed" || item.status === "filed") {
+          byCategory[item.category].completed++;
+        }
+      }
+    });
+
+    return {
+      gst: byCategory.gst.total > 0 
+        ? Math.round((byCategory.gst.completed / byCategory.gst.total) * 100) 
+        : 100,
+      income_tax: byCategory.income_tax.total > 0 
+        ? Math.round((byCategory.income_tax.completed / byCategory.income_tax.total) * 100) 
+        : 100,
+      compliance: byCategory.compliance.total > 0 
+        ? Math.round((byCategory.compliance.completed / byCategory.compliance.total) * 100) 
+        : 100,
+    };
+  };
+
+  const scores = calculateScores();
+  const overallScore = Math.round((scores.gst + scores.income_tax + scores.compliance) / 3);
+
+  // Calculate upcoming deadlines
+  const now = new Date();
+  const upcomingDeadlines = workItems
+    .filter(item => item.due_date && item.status !== "completed" && item.status !== "filed")
+    .map(item => {
+      const dueDate = new Date(item.due_date!);
+      const daysLeft = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        ...item,
+        daysLeft,
+        status: daysLeft < 0 ? "overdue" : daysLeft <= 7 ? "urgent" : "upcoming"
+      };
+    })
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, 10);
+
+  // Recent filings
+  const recentFilings = workItems
+    .filter(item => item.status === "filed" || item.status === "completed")
+    .slice(0, 5);
+
+  const complianceAreas = [
+    { name: "GST Compliance", score: scores.gst, status: scores.gst >= 90 ? "good" : scores.gst >= 75 ? "attention" : "critical" },
+    { name: "Income Tax", score: scores.income_tax, status: scores.income_tax >= 90 ? "excellent" : scores.income_tax >= 75 ? "good" : "attention" },
+    { name: "ROC/Statutory", score: scores.compliance, status: scores.compliance >= 90 ? "good" : scores.compliance >= 75 ? "attention" : "critical" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar activeItem={location.pathname} onNavigate={(href) => navigate(href)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -114,7 +185,10 @@ export default function CompliancePage() {
                         strokeWidth="12"
                         fill="none"
                         strokeDasharray={`${(overallScore / 100) * 352} 352`}
-                        className="text-success"
+                        className={cn(
+                          overallScore >= 90 ? "text-success" :
+                          overallScore >= 75 ? "text-warning" : "text-destructive"
+                        )}
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -122,7 +196,10 @@ export default function CompliancePage() {
                     </div>
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-foreground">Overall Compliance</h3>
-                  <p className="text-sm text-muted-foreground">Excellent standing</p>
+                  <p className="text-sm text-muted-foreground">
+                    {overallScore >= 90 ? "Excellent standing" :
+                     overallScore >= 75 ? "Good standing" : "Needs attention"}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -166,49 +243,60 @@ export default function CompliancePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {upcomingDeadlines.map((deadline) => (
-                  <div
-                    key={deadline.id}
-                    className={cn(
-                      "flex items-center gap-4 p-4 rounded-lg border",
-                      deadline.status === "overdue" 
-                        ? "border-destructive/30 bg-destructive/5"
-                        : deadline.daysLeft <= 7 
-                          ? "border-warning/30 bg-warning/5"
-                          : "border-border"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center",
-                      deadline.status === "overdue" 
-                        ? "bg-destructive/10"
-                        : deadline.daysLeft <= 7 
-                          ? "bg-warning/10"
-                          : "bg-primary/10"
-                    )}>
-                      {deadline.status === "overdue" ? (
-                        <AlertTriangle className="w-5 h-5 text-destructive" />
-                      ) : (
-                        <Clock className={cn(
-                          "w-5 h-5",
-                          deadline.daysLeft <= 7 ? "text-warning" : "text-primary"
-                        )} />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-foreground">{deadline.title}</h4>
-                      <p className="text-sm text-muted-foreground">Due: {deadline.dueDate}</p>
-                    </div>
-                    <Badge variant={
-                      deadline.status === "overdue" ? "destructive" :
-                      deadline.daysLeft <= 7 ? "default" : "secondary"
-                    }>
-                      {deadline.status === "overdue" 
-                        ? `${Math.abs(deadline.daysLeft)} days overdue`
-                        : `${deadline.daysLeft} days left`}
-                    </Badge>
+                {upcomingDeadlines.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-success opacity-50" />
+                    <p>No pending deadlines</p>
+                    <p className="text-sm">Create work items with due dates to track compliance</p>
                   </div>
-                ))}
+                ) : (
+                  upcomingDeadlines.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => navigate(`/work/${item.id}`)}
+                      className={cn(
+                        "flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-secondary/30",
+                        item.status === "overdue" 
+                          ? "border-destructive/30 bg-destructive/5"
+                          : item.status === "urgent"
+                            ? "border-warning/30 bg-warning/5"
+                            : "border-border"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        item.status === "overdue" 
+                          ? "bg-destructive/10"
+                          : item.status === "urgent"
+                            ? "bg-warning/10"
+                            : "bg-primary/10"
+                      )}>
+                        {item.status === "overdue" ? (
+                          <AlertTriangle className="w-5 h-5 text-destructive" />
+                        ) : (
+                          <Clock className={cn(
+                            "w-5 h-5",
+                            item.status === "urgent" ? "text-warning" : "text-primary"
+                          )} />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-foreground">{item.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {item.clients?.company_name} • Due: {new Date(item.due_date!).toLocaleDateString("en-IN")}
+                        </p>
+                      </div>
+                      <Badge variant={
+                        item.status === "overdue" ? "destructive" :
+                        item.status === "urgent" ? "default" : "secondary"
+                      }>
+                        {item.status === "overdue" 
+                          ? `${Math.abs(item.daysLeft)} days overdue`
+                          : `${item.daysLeft} days left`}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -221,21 +309,32 @@ export default function CompliancePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {recentFilings.map((filing, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30"
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-success" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-foreground">{filing.title}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{filing.date}</span>
-                    <Badge variant="outline" className="text-success border-success/30">
-                      Filed
-                    </Badge>
+                {recentFilings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No recent filings</p>
+                    <p className="text-sm">Completed work items will appear here</p>
                   </div>
-                ))}
+                ) : (
+                  recentFilings.map((filing) => (
+                    <div
+                      key={filing.id}
+                      className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30"
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-success" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-foreground">{filing.title}</span>
+                        <p className="text-xs text-muted-foreground">{filing.clients?.company_name}</p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {filing.completed_at ? formatRelativeTime(filing.completed_at) : ""}
+                      </span>
+                      <Badge variant="outline" className="text-success border-success/30">
+                        {filing.status === "filed" ? "Filed" : "Completed"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>

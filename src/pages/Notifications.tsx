@@ -1,63 +1,13 @@
-import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, CheckCircle2, AlertTriangle, Info, X, Check } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Bell, CheckCircle2, AlertTriangle, Info, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "success" | "warning" | "info" | "error";
-  timestamp: string;
-  read: boolean;
-}
-
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "GSTR-3B Draft Ready",
-    message: "GST Agent has prepared the GSTR-3B draft for December 2024. Please review and approve.",
-    type: "info",
-    timestamp: "2 hours ago",
-    read: false,
-  },
-  {
-    id: "2",
-    title: "ITC Mismatch Detected",
-    message: "Found ₹45,230 mismatch between GSTR-2B and your purchase register. Action required.",
-    type: "warning",
-    timestamp: "4 hours ago",
-    read: false,
-  },
-  {
-    id: "3",
-    title: "Advance Tax Reminder",
-    message: "Q3 advance tax payment due on March 15, 2025. Estimated liability: ₹1,25,000",
-    type: "warning",
-    timestamp: "Yesterday",
-    read: false,
-  },
-  {
-    id: "4",
-    title: "Bank Statement Processed",
-    message: "HDFC statement for December has been processed. 156 transactions classified.",
-    type: "success",
-    timestamp: "Yesterday",
-    read: true,
-  },
-  {
-    id: "5",
-    title: "GSTR-1 Filed Successfully",
-    message: "GSTR-1 for November 2024 has been filed successfully. ARN: AA123456789",
-    type: "success",
-    timestamp: "2 days ago",
-    read: true,
-  },
-];
+import { formatRelativeTime } from "@/hooks/useActivityLog";
+import { Badge } from "@/components/ui/badge";
 
 const typeConfig = {
   success: { icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
@@ -69,23 +19,28 @@ const typeConfig = {
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const { 
+    notifications, 
+    loading, 
+    unreadCount,
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useNotifications();
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background">
+        <Sidebar activeItem={location.pathname} onNavigate={(href) => navigate(href)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -108,12 +63,18 @@ export default function NotificationsPage() {
                     : 'All caught up!'}
                 </p>
               </div>
-              {unreadCount > 0 && (
-                <Button variant="outline" onClick={markAllAsRead}>
-                  <Check className="w-4 h-4 mr-2" />
-                  Mark all as read
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1">
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  Real-time
+                </Badge>
+                {unreadCount > 0 && (
+                  <Button variant="outline" onClick={markAllAsRead}>
+                    <Check className="w-4 h-4 mr-2" />
+                    Mark all as read
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Notifications List */}
@@ -128,11 +89,15 @@ export default function NotificationsPage() {
                 {notifications.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No notifications</p>
+                    <p className="font-medium">No notifications yet</p>
+                    <p className="text-sm">
+                      You'll receive notifications when agents complete tasks or need your approval
+                    </p>
                   </div>
                 ) : (
                   notifications.map((notification) => {
-                    const TypeIcon = typeConfig[notification.type].icon;
+                    const config = typeConfig[notification.type] || typeConfig.info;
+                    const TypeIcon = config.icon;
                     return (
                       <div
                         key={notification.id}
@@ -145,9 +110,9 @@ export default function NotificationsPage() {
                       >
                         <div className={cn(
                           "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                          typeConfig[notification.type].bg
+                          config.bg
                         )}>
-                          <TypeIcon className={cn("w-5 h-5", typeConfig[notification.type].color)} />
+                          <TypeIcon className={cn("w-5 h-5", config.color)} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -165,7 +130,7 @@ export default function NotificationsPage() {
                             {notification.message}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {notification.timestamp}
+                            {formatRelativeTime(notification.created_at)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
