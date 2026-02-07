@@ -5,6 +5,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, FileText, Receipt, Calculator, ClipboardCheck, Building2, LineChart, Shield, Briefcase, Download, Search, Calendar, CheckCircle2, Clock, AlertTriangle, Play } from "lucide-react";
+import { Plus, FileText, Receipt, Calculator, ClipboardCheck, Building2, LineChart, Shield, Briefcase, Download, Search, Calendar, CheckCircle2, Clock, AlertTriangle, Play, Crown, Lock } from "lucide-react";
 import { generateWorkPDF } from "@/lib/pdfGenerator";
+import { UsageBanner } from "@/components/subscription/UsageBanner";
+import { UpgradeModal } from "@/components/subscription/UpgradeModal";
 
 type WorkCategory = "accounting" | "gst" | "income_tax" | "audit" | "compliance" | "fpa" | "risk" | "advisory";
 type WorkStatus = "draft" | "in_progress" | "review" | "completed" | "filed";
@@ -64,6 +67,8 @@ export default function WorkPage() {
   const clientFilter = searchParams.get("client");
   const { logActivity } = useActivityLog();
   const { createNotification } = useNotifications();
+  const { subscription, canCreateWorkItem, incrementUsage, isTrialExpired } = useSubscription();
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   
   const [clients, setClients] = useState<Client[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -104,6 +109,14 @@ export default function WorkPage() {
       return;
     }
 
+    // Check subscription limits
+    if (!canCreateWorkItem()) {
+      toast.error("Free trial limit reached. Please upgrade to continue.");
+      setDialogOpen(false);
+      setUpgradeModalOpen(true);
+      return;
+    }
+
     const { data, error } = await supabase.from("work_items").insert([{
       user_id: user.id,
       client_id: formData.client_id,
@@ -116,6 +129,9 @@ export default function WorkPage() {
     if (error) {
       toast.error("Failed to create work item");
     } else {
+      // Increment usage counter
+      await incrementUsage();
+      
       toast.success("Work item created!");
       await logActivity("create", "work_item", data.id, { name: formData.title, category: formData.category });
       await createNotification(
@@ -187,6 +203,9 @@ export default function WorkPage() {
         <Header />
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+            {/* Usage Banner */}
+            <UsageBanner />
+
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-display font-bold text-foreground">
@@ -198,7 +217,19 @@ export default function WorkPage() {
               </div>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button><Plus className="w-4 h-4 mr-2" />New Work Item</Button>
+                  <Button disabled={isTrialExpired()}>
+                    {isTrialExpired() ? (
+                      <>
+                        <Lock className="w-4 h-4 mr-2" />
+                        Upgrade to Create
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Work Item
+                      </>
+                    )}
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -335,6 +366,13 @@ export default function WorkPage() {
           </div>
         </main>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        currentPlan={subscription?.plan || "free"}
+      />
     </div>
   );
 }
