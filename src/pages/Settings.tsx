@@ -5,14 +5,18 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
-import { User, Bell, Shield, Database, Save, Loader2 } from "lucide-react";
+import { useSubscription, PLANS } from "@/hooks/useSubscription";
+import { User, Bell, Shield, Database, Save, Loader2, Crown, CreditCard, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { UpgradeModal } from "@/components/subscription/UpgradeModal";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -20,8 +24,10 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { logActivity } = useActivityLog();
+  const { subscription, getRemainingWorkItems, getUsagePercentage, isPaidPlan } = useSubscription();
   
   const [saving, setSaving] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     firm_name: "",
@@ -98,6 +104,100 @@ export default function SettingsPage() {
                 Manage your account, notifications, and preferences
               </p>
             </div>
+
+            {/* Subscription Settings */}
+            <Card className={subscription?.plan !== "free" ? "border-primary/30" : ""}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="w-5 h-5" />
+                  Subscription
+                  {subscription && (
+                    <Badge className={subscription.plan === "free" ? "bg-secondary text-secondary-foreground" : "gradient-primary text-white"}>
+                      {PLANS[subscription.plan].name}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>Manage your plan and billing</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {subscription?.plan === "free" ? (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Work Items Used</span>
+                        <span className="font-medium">{subscription.work_items_used} / {subscription.work_items_limit}</span>
+                      </div>
+                      <Progress value={getUsagePercentage()} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {typeof getRemainingWorkItems() === "number" 
+                          ? `${getRemainingWorkItems()} free work items remaining`
+                          : "Unlimited work items"}
+                      </p>
+                    </div>
+                    <Separator />
+                    <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                      <div className="flex items-start gap-3">
+                        <Sparkles className="w-5 h-5 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-medium">Upgrade to Professional</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Unlock unlimited work items and premium features for ₹999/month
+                          </p>
+                          <ul className="grid grid-cols-2 gap-1 mb-3">
+                            {PLANS.professional.features.slice(0, 4).map((f, i) => (
+                              <li key={i} className="flex items-center gap-1 text-xs">
+                                <Check className="w-3 h-3 text-success" />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                          <Button size="sm" onClick={() => setUpgradeModalOpen(true)}>
+                            <Crown className="w-4 h-4 mr-1" />
+                            Upgrade Now
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Current Plan</p>
+                        <p className="text-sm text-muted-foreground">{PLANS[subscription.plan].name} - {PLANS[subscription.plan].priceDisplay}</p>
+                      </div>
+                      <Badge className="gradient-primary text-white">Active</Badge>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Work Items</p>
+                        <p className="text-sm text-muted-foreground">Unlimited access</p>
+                      </div>
+                      <span className="text-2xl font-bold text-success">∞</span>
+                    </div>
+                    {subscription.current_period_end && (
+                      <>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">Next Billing Date</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(subscription.current_period_end).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric"
+                              })}
+                            </p>
+                          </div>
+                          <Button variant="outline" size="sm">Manage Billing</Button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Profile Settings */}
             <Card>
@@ -296,6 +396,13 @@ export default function SettingsPage() {
           </div>
         </main>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        currentPlan={subscription?.plan || "free"}
+      />
     </div>
   );
 }

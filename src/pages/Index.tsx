@@ -6,9 +6,11 @@ import { QueryInterface } from "@/components/dashboard/QueryInterface";
 import { ApprovalQueue } from "@/components/dashboard/ApprovalQueue";
 import { UploadCard } from "@/components/dashboard/UploadCard";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { UsageBanner } from "@/components/subscription/UsageBanner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   IndianRupee,
   FileCheck,
@@ -92,6 +94,9 @@ export default function Index() {
   const location = useLocation();
   const { getGreeting, getFirstName } = useProfile();
   const { stats, loading: statsLoading, formatCurrency } = useDashboardStats();
+  const { subscription, getRemainingWorkItems } = useSubscription();
+
+  const remainingItems = getRemainingWorkItems();
 
   const dynamicStats = [
     {
@@ -133,6 +138,9 @@ export default function Index() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+            {/* Usage Banner */}
+            <UsageBanner />
+
             {/* Welcome Section */}
             <div className="mb-8">
               <h1 className="text-3xl font-display font-bold text-foreground mb-2">
@@ -140,6 +148,11 @@ export default function Index() {
               </h1>
               <p className="text-muted-foreground">
                 Your AI agents are ready to help. Here's an overview of your practice.
+                {subscription?.plan === "free" && typeof remainingItems === "number" && (
+                  <span className="ml-2 text-primary font-medium">
+                    ({remainingItems} free work items remaining)
+                  </span>
+                )}
               </p>
             </div>
 

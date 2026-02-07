@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useSubscription, PLANS } from "@/hooks/useSubscription";
 import {
   LayoutDashboard,
   Bot,
@@ -14,7 +15,10 @@ import {
   TrendingUp,
   Building2,
   Briefcase,
+  Crown,
+  Zap,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface NavItem {
   icon: React.ElementType;
@@ -47,6 +51,10 @@ interface SidebarProps {
 
 export function Sidebar({ activeItem = "/", onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { subscription, getRemainingWorkItems } = useSubscription();
+  
+  const remaining = getRemainingWorkItems();
+  const isPro = subscription?.plan !== "free";
 
   const NavLink = ({ item }: { item: NavItem }) => {
     const isActive = activeItem === item.href;
@@ -105,7 +113,19 @@ export function Sidebar({ activeItem = "/", onNavigate }: SidebarProps) {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-display font-bold text-lg text-foreground">TaxAgent</span>
-              <span className="text-xs text-muted-foreground">AI Powered CA</span>
+              <div className="flex items-center gap-1.5">
+                {isPro ? (
+                  <Badge className="gradient-primary text-white text-[10px] px-1.5 py-0 h-4">
+                    <Crown className="w-2.5 h-2.5 mr-0.5" />
+                    PRO
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                    <Zap className="w-2.5 h-2.5 mr-0.5" />
+                    {typeof remaining === "number" ? `${remaining} free` : "Free"}
+                  </Badge>
+                )}
+              </div>
             </div>
           )}
         </div>
