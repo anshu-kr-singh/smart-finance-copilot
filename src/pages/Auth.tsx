@@ -114,21 +114,21 @@ export default function AuthPage() {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <Bot className="w-8 h-8 text-white" />
+              <span className="text-white font-bold text-2xl">A</span>
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-white">TaxAgent AI</h1>
-              <p className="text-sm text-white/70">AI-Powered CA Practice</p>
+              <h1 className="text-2xl font-display font-bold text-white">Asrofyz CA</h1>
+              <p className="text-sm text-white/70">Professional CA Practice • Est. 2026</p>
             </div>
           </div>
 
           {/* Hero Text */}
           <div className="mb-12">
             <h2 className="text-4xl font-display font-bold text-white mb-4 leading-tight">
-              Automate Your CA Practice with AI
+              Professional CA Practice, Powered by AI
             </h2>
             <p className="text-lg text-white/80 max-w-md">
-              Let intelligent agents handle GST, Income Tax, Audit & Compliance work while you focus on advisory and client relationships.
+              Real industry work with intelligent agents. Upload data, process GST returns, reconcile accounts, and generate professional outputs.
             </p>
           </div>
 
@@ -169,11 +169,11 @@ export default function AuthPage() {
           {/* Mobile Logo */}
           <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
             <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <Bot className="w-6 h-6 text-primary-foreground" />
+              <span className="text-primary-foreground font-bold text-xl">A</span>
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">TaxAgent AI</h1>
-              <p className="text-sm text-muted-foreground">CA Practice Management</p>
+              <h1 className="text-2xl font-display font-bold text-foreground">Asrofyz CA</h1>
+              <p className="text-sm text-muted-foreground">Est. 2026 • Professional Practice</p>
             </div>
           </div>
 

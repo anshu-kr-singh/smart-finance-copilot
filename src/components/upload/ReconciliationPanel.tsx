@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   GitCompare, 
@@ -12,9 +13,17 @@ import {
   Download, 
   Loader2,
   FileText,
-  ArrowRight
+  ArrowRight,
+  Lightbulb,
+  ArrowUpRight,
+  CheckCheck,
+  ListX,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { MismatchTable } from "./MismatchTable";
+import { MatchedDataTable } from "./MatchedDataTable";
+import { ReconciliationSuggestions } from "./ReconciliationSuggestions";
 import { generateReconciliationReport } from "@/lib/reconciliationReport";
 
 interface Entry {
@@ -34,6 +43,15 @@ interface ProcessedFile {
   totalAmount: string;
 }
 
+interface MatchedEntry {
+  matched: boolean;
+  file1Entry: Entry;
+  file2Entry: Entry | null;
+  matchType: "exact" | "partial" | "unmatched";
+  confidence: number;
+  reason?: string;
+}
+
 interface ReconciliationResult {
   summary: {
     totalFile1: number;
@@ -44,17 +62,11 @@ interface ReconciliationResult {
     matchPercentage: number;
     amountDifference: string;
   };
-  matchedEntries: Array<{
-    matched: boolean;
-    file1Entry: Entry;
-    file2Entry: Entry | null;
-    matchType: "exact" | "partial" | "unmatched";
-    confidence: number;
-    reason?: string;
-  }>;
+  matchedEntries: MatchedEntry[];
   unmatchedFromFile1: Entry[];
   unmatchedFromFile2: Entry[];
   aiInsights: string;
+  suggestions?: string[];
 }
 
 interface ReconciliationPanelProps {
@@ -65,12 +77,13 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
   const [selectedFiles, setSelectedFiles] = useState<[string | null, string | null]>([null, null]);
   const [isReconciling, setIsReconciling] = useState(false);
   const [result, setResult] = useState<ReconciliationResult | null>(null);
+  const [activeTab, setActiveTab] = useState("summary");
 
   const handleFileSelect = (fileId: string, slot: 0 | 1) => {
     const newSelection = [...selectedFiles] as [string | null, string | null];
     newSelection[slot] = fileId;
     setSelectedFiles(newSelection);
-    setResult(null); // Clear previous result
+    setResult(null);
   };
 
   const getSelectedFile = (slot: 0 | 1) => {
@@ -121,7 +134,15 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
       }
 
       const data = await response.json();
-      setResult(data.result);
+      
+      // Add default suggestions if not provided
+      const resultWithSuggestions = {
+        ...data.result,
+        suggestions: data.result.suggestions || generateSuggestions(data.result),
+      };
+      
+      setResult(resultWithSuggestions);
+      setActiveTab("summary");
       
       if (data.result.summary.matchPercentage >= 90) {
         toast.success("Excellent! Data matches with high confidence");
@@ -136,6 +157,36 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
     } finally {
       setIsReconciling(false);
     }
+  };
+
+  const generateSuggestions = (result: ReconciliationResult): string[] => {
+    const suggestions: string[] = [];
+    
+    if (result.summary.unmatched > 0) {
+      suggestions.push(`Review ${result.summary.unmatched} unmatched entries - check for data entry errors, missing invoices, or timing differences.`);
+    }
+    
+    if (result.summary.partialMatched > 0) {
+      suggestions.push(`${result.summary.partialMatched} entries have partial matches - verify amounts and references manually to confirm accuracy.`);
+    }
+    
+    if (result.summary.amountDifference !== "₹0") {
+      suggestions.push(`Net difference of ${result.summary.amountDifference} detected - investigate timing differences, pending entries, or reconciliation adjustments needed.`);
+    }
+    
+    if (result.unmatchedFromFile1.length > result.unmatchedFromFile2.length) {
+      suggestions.push("More unmatched entries in source file - some transactions may not have been recorded in the comparison file yet.");
+    }
+    
+    if (result.summary.matchPercentage >= 95) {
+      suggestions.push("High match rate achieved! Review minor discrepancies and proceed with sign-off.");
+    } else if (result.summary.matchPercentage < 70) {
+      suggestions.push("Low match rate indicates potential data quality issues - verify file formats, date ranges, and data extraction accuracy.");
+    }
+    
+    suggestions.push("Export the reconciliation report for audit trail and management review.");
+    
+    return suggestions;
   };
 
   const handleDownloadReport = () => {
@@ -164,6 +215,9 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
     );
   }
 
+  const exactMatches = result?.matchedEntries.filter(e => e.matchType === "exact") || [];
+  const partialMatches = result?.matchedEntries.filter(e => e.matchType === "partial") || [];
+
   return (
     <div className="space-y-6">
       {/* File Selection */}
@@ -172,11 +226,15 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
           <CardTitle className="flex items-center gap-2">
             <GitCompare className="w-5 h-5" />
             Data Reconciliation
+            <Badge variant="secondary" className="ml-2">
+              <Sparkles className="w-3 h-3 mr-1" />
+              AI-Powered
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Select two files to compare and find matching/mismatching entries using AI-powered analysis
+            Select two files to compare and find matching/mismatching entries with AI-powered analysis and actionable suggestions
           </p>
 
           <div className="grid md:grid-cols-[1fr,auto,1fr] gap-4 items-center">
@@ -267,15 +325,9 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
       {/* Results */}
       {result && (
         <>
-          {/* Summary Card */}
-          <Card className={
-            result.summary.matchPercentage >= 90 
-              ? "border-success/30 bg-success/5" 
-              : result.summary.matchPercentage >= 70
-              ? "border-warning/30 bg-warning/5"
-              : "border-destructive/30 bg-destructive/5"
-          }>
-            <CardHeader>
+          {/* Results Tabs */}
+          <Card>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   {result.summary.matchPercentage >= 90 ? (
@@ -293,74 +345,136 @@ export function ReconciliationPanel({ files }: ReconciliationPanelProps) {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Match Percentage */}
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Match Rate</span>
-                  <span className="font-semibold">{result.summary.matchPercentage}%</span>
-                </div>
-                <Progress 
-                  value={result.summary.matchPercentage} 
-                  className="h-3"
-                />
-              </div>
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsTrigger value="summary" className="gap-2">
+                    <CheckCheck className="w-4 h-4" />
+                    Summary
+                  </TabsTrigger>
+                  <TabsTrigger value="matched" className="gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Matched ({result.summary.matched})
+                  </TabsTrigger>
+                  <TabsTrigger value="unmatched" className="gap-2">
+                    <ListX className="w-4 h-4" />
+                    Unmatched ({result.summary.unmatched})
+                  </TabsTrigger>
+                  <TabsTrigger value="suggestions" className="gap-2">
+                    <Lightbulb className="w-4 h-4" />
+                    Next Steps
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-3 rounded-lg bg-background border">
-                  <div className="text-2xl font-bold text-success">{result.summary.matched}</div>
-                  <div className="text-xs text-muted-foreground">Exact Matches</div>
-                </div>
-                <div className="p-3 rounded-lg bg-background border">
-                  <div className="text-2xl font-bold text-warning">{result.summary.partialMatched}</div>
-                  <div className="text-xs text-muted-foreground">Partial Matches</div>
-                </div>
-                <div className="p-3 rounded-lg bg-background border">
-                  <div className="text-2xl font-bold text-destructive">{result.summary.unmatched}</div>
-                  <div className="text-xs text-muted-foreground">Unmatched</div>
-                </div>
-                <div className="p-3 rounded-lg bg-background border">
-                  <div className="text-2xl font-bold">{result.summary.amountDifference}</div>
-                  <div className="text-xs text-muted-foreground">Amount Difference</div>
-                </div>
-              </div>
+                {/* Summary Tab */}
+                <TabsContent value="summary" className="space-y-6">
+                  {/* Match Percentage */}
+                  <div className={`p-4 rounded-lg border ${
+                    result.summary.matchPercentage >= 90 
+                      ? "border-success/30 bg-success/5" 
+                      : result.summary.matchPercentage >= 70
+                      ? "border-warning/30 bg-warning/5"
+                      : "border-destructive/30 bg-destructive/5"
+                  }`}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium">Overall Match Rate</span>
+                      <span className="font-bold text-lg">{result.summary.matchPercentage}%</span>
+                    </div>
+                    <Progress 
+                      value={result.summary.matchPercentage} 
+                      className="h-3"
+                    />
+                  </div>
 
-              {/* AI Insights */}
-              <div className="p-4 rounded-lg bg-background border">
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  AI Insights
-                </h4>
-                <p className="text-sm text-muted-foreground">{result.aiInsights}</p>
-              </div>
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-lg bg-success/10 border border-success/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle2 className="w-4 h-4 text-success" />
+                        <span className="text-xs text-muted-foreground">Exact Matches</span>
+                      </div>
+                      <div className="text-2xl font-bold text-success">{result.summary.matched}</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-warning/10 border border-warning/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-warning" />
+                        <span className="text-xs text-muted-foreground">Partial Matches</span>
+                      </div>
+                      <div className="text-2xl font-bold text-warning">{result.summary.partialMatched}</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <XCircle className="w-4 h-4 text-destructive" />
+                        <span className="text-xs text-muted-foreground">Unmatched</span>
+                      </div>
+                      <div className="text-2xl font-bold text-destructive">{result.summary.unmatched}</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Net Difference</span>
+                      </div>
+                      <div className="text-2xl font-bold">{result.summary.amountDifference}</div>
+                    </div>
+                  </div>
 
-              {/* Status Badges */}
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">
-                  File 1: {result.summary.totalFile1} entries
-                </Badge>
-                <Badge variant="outline">
-                  File 2: {result.summary.totalFile2} entries
-                </Badge>
-                {result.summary.matchPercentage >= 90 && (
-                  <Badge className="bg-success text-success-foreground">
-                    High Confidence Match
-                  </Badge>
-                )}
-              </div>
+                  {/* AI Insights */}
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-primary" />
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      AI Analysis
+                    </h4>
+                    <p className="text-sm text-foreground">{result.aiInsights}</p>
+                  </div>
+
+                  {/* File Stats */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      {getSelectedFile(0)?.name}: {result.summary.totalFile1} entries
+                    </Badge>
+                    <Badge variant="outline">
+                      {getSelectedFile(1)?.name}: {result.summary.totalFile2} entries
+                    </Badge>
+                    {result.summary.matchPercentage >= 90 && (
+                      <Badge className="bg-success text-success-foreground">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        High Confidence
+                      </Badge>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Matched Tab */}
+                <TabsContent value="matched">
+                  <MatchedDataTable 
+                    exactMatches={exactMatches}
+                    partialMatches={partialMatches}
+                  />
+                </TabsContent>
+
+                {/* Unmatched Tab */}
+                <TabsContent value="unmatched">
+                  <MismatchTable
+                    unmatchedFromFile1={result.unmatchedFromFile1}
+                    unmatchedFromFile2={result.unmatchedFromFile2}
+                    file1Name={getSelectedFile(0)?.name || "File 1"}
+                    file2Name={getSelectedFile(1)?.name || "File 2"}
+                  />
+                </TabsContent>
+
+                {/* Suggestions Tab */}
+                <TabsContent value="suggestions">
+                  <ReconciliationSuggestions 
+                    suggestions={result.suggestions || []}
+                    matchPercentage={result.summary.matchPercentage}
+                    unmatchedCount={result.summary.unmatched}
+                    amountDifference={result.summary.amountDifference}
+                  />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
-
-          {/* Mismatch Details */}
-          {(result.unmatchedFromFile1.length > 0 || result.unmatchedFromFile2.length > 0) && (
-            <MismatchTable
-              unmatchedFromFile1={result.unmatchedFromFile1}
-              unmatchedFromFile2={result.unmatchedFromFile2}
-              file1Name={getSelectedFile(0)?.name || "File 1"}
-              file2Name={getSelectedFile(1)?.name || "File 2"}
-            />
-          )}
         </>
       )}
     </div>
