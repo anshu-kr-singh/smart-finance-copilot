@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon, Activity, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface AgentCardProps {
   name: string;
@@ -8,6 +9,7 @@ interface AgentCardProps {
   icon: LucideIcon;
   status: "active" | "processing" | "idle" | "alert";
   tasksCompleted: number;
+  agentType: string;
   tasksTotal: number;
   lastRun?: string;
   variant?: "gst" | "tax" | "audit" | "compliance" | "accounting" | "advisory";
@@ -58,10 +60,16 @@ export function AgentCard({
   tasksTotal,
   lastRun,
   variant = "accounting",
+  agentType,
 }: AgentCardProps) {
+  const navigate = useNavigate();
   const statusInfo = statusConfig[status];
   const StatusIcon = statusInfo.icon;
   const progress = tasksTotal > 0 ? (tasksCompleted / tasksTotal) * 100 : 0;
+
+  const handleOpenAgent = () => {
+    navigate(`/agents/${agentType}`);
+  };
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card hover:shadow-lg transition-all duration-300 group overflow-hidden">
@@ -114,8 +122,13 @@ export function AgentCard({
           {lastRun && (
             <span className="text-xs text-muted-foreground">Last run: {lastRun}</span>
           )}
-          <Button variant="ghost" size="sm" className="ml-auto text-primary hover:text-primary/80">
-            View Details →
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="ml-auto text-primary hover:text-primary/80"
+            onClick={handleOpenAgent}
+          >
+            Open Agent →
           </Button>
         </div>
       </div>

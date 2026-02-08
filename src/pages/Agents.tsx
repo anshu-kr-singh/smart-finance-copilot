@@ -21,6 +21,7 @@ const agents = [
     tasksTotal: 12,
     lastRun: "5 min ago",
     variant: "gst" as const,
+    agentType: "gst",
   },
   {
     name: "Income Tax Agent",
@@ -31,6 +32,7 @@ const agents = [
     tasksTotal: 15,
     lastRun: "2 hours ago",
     variant: "tax" as const,
+    agentType: "incometax",
   },
   {
     name: "Audit Assistant",
@@ -41,6 +43,7 @@ const agents = [
     tasksTotal: 5,
     lastRun: "Yesterday",
     variant: "audit" as const,
+    agentType: "audit",
   },
   {
     name: "Compliance & ROC",
@@ -51,6 +54,7 @@ const agents = [
     tasksTotal: 4,
     lastRun: "30 min ago",
     variant: "compliance" as const,
+    agentType: "compliance",
   },
   {
     name: "Accounting Agent",
@@ -61,6 +65,7 @@ const agents = [
     tasksTotal: 150,
     lastRun: "1 hour ago",
     variant: "accounting" as const,
+    agentType: "accounting",
   },
   {
     name: "FP&A / Advisory",
@@ -71,6 +76,7 @@ const agents = [
     tasksTotal: 3,
     lastRun: "3 days ago",
     variant: "advisory" as const,
+    agentType: "advisory",
   },
 ];
 
