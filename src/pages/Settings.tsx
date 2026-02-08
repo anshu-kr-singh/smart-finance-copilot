@@ -159,7 +159,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </>
-                ) : (
+                ) : subscription ? (
                   <>
                     <div className="flex items-center justify-between">
                       <div>
@@ -195,6 +195,10 @@ export default function SettingsPage() {
                       </>
                     )}
                   </>
+                ) : (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
                 )}
               </CardContent>
             </Card>
