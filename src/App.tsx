@@ -10,6 +10,7 @@ import ClientsPage from "./pages/Clients";
 import WorkPage from "./pages/Work";
 import WorkDetailPage from "./pages/WorkDetail";
 import Agents from "./pages/Agents";
+import AgentChat from "./pages/AgentChat";
 import UploadPage from "./pages/Upload";
 import QueryPage from "./pages/Query";
 import ApprovalsPage from "./pages/Approvals";
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/work" element={<ProtectedRoute><WorkPage /></ProtectedRoute>} />
           <Route path="/work/:id" element={<ProtectedRoute><WorkDetailPage /></ProtectedRoute>} />
           <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+          <Route path="/agents/:agentType" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
           <Route path="/query" element={<ProtectedRoute><QueryPage /></ProtectedRoute>} />
           <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
