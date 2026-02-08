@@ -108,19 +108,20 @@ export function Sidebar({ activeItem = "/", onNavigate }: SidebarProps) {
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
-            <Bot className="w-6 h-6 text-primary-foreground" />
+            <span className="text-primary-foreground font-bold text-lg">A</span>
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-display font-bold text-lg text-foreground">TaxAgent</span>
+              <span className="font-display font-bold text-lg text-foreground">Asrofyz CA</span>
               <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">Est. 2026</span>
                 {isPro ? (
-                  <Badge className="gradient-primary text-white text-[10px] px-1.5 py-0 h-4">
+                  <Badge className="gradient-primary text-white text-[10px] px-1.5 py-0 h-4 ml-1">
                     <Crown className="w-2.5 h-2.5 mr-0.5" />
                     PRO
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
                     <Zap className="w-2.5 h-2.5 mr-0.5" />
                     {typeof remaining === "number" ? `${remaining} free` : "Free"}
                   </Badge>
