@@ -25,6 +25,7 @@ import {
   Users,
   Briefcase,
 } from "lucide-react";
+import asrofyzLogo from "@/assets/asrofyz-logo.png";
 
 const agents = [
   {
@@ -148,18 +149,25 @@ export default function Index() {
             <UsageBanner />
 
             {/* Welcome Section */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                {getGreeting()}, {getFirstName()} 👋
-              </h1>
-              <p className="text-muted-foreground">
-                Your AI agents are ready to help. Here's an overview of your practice.
-                {subscription?.plan === "free" && typeof remainingItems === "number" && (
-                  <span className="ml-2 text-primary font-medium">
-                    ({remainingItems} free work items remaining)
-                  </span>
-                )}
-              </p>
+            <div className="mb-8 flex items-center gap-4">
+              <img 
+                src={asrofyzLogo} 
+                alt="Asrofyz CA" 
+                className="w-16 h-16 object-contain rounded-lg shadow-lg hidden md:block"
+              />
+              <div>
+                <h1 className="text-3xl font-display font-bold text-foreground mb-2">
+                  {getGreeting()}, {getFirstName()} 👋
+                </h1>
+                <p className="text-muted-foreground">
+                  Your AI agents are ready to help. Here's an overview of your practice.
+                  {subscription?.plan === "free" && typeof remainingItems === "number" && (
+                    <span className="ml-2 text-primary font-medium">
+                      ({remainingItems} free work items remaining)
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
 
             {/* Stats Grid */}

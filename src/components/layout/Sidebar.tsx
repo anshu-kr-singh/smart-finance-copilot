@@ -19,6 +19,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import asrofyzLogo from "@/assets/asrofyz-logo.png";
 
 interface NavItem {
   icon: React.ElementType;
@@ -107,9 +108,14 @@ export function Sidebar({ activeItem = "/", onNavigate }: SidebarProps) {
       {/* Logo */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
-            <span className="text-primary-foreground font-bold text-lg">A</span>
-          </div>
+          <img 
+            src={asrofyzLogo} 
+            alt="Asrofyz CA" 
+            className={cn(
+              "object-contain rounded-lg shadow-lg",
+              collapsed ? "w-10 h-10" : "w-12 h-12"
+            )}
+          />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-display font-bold text-lg text-foreground">Asrofyz CA</span>
