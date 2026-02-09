@@ -106,13 +106,17 @@ export function AgentCard({
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">Tasks Progress</span>
             <span className="font-medium text-foreground">
-              {tasksCompleted}/{tasksTotal}
+              {tasksTotal > 0 ? `${tasksCompleted}/${tasksTotal}` : "No tasks yet"}
             </span>
           </div>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">
             <div
-              className={cn("h-full bg-gradient-to-r transition-all duration-500", variantGradients[variant])}
-              style={{ width: `${progress}%` }}
+              className={cn(
+                "h-full bg-gradient-to-r transition-all duration-500", 
+                variantGradients[variant],
+                tasksTotal === 0 && "opacity-30"
+              )}
+              style={{ width: tasksTotal > 0 ? `${progress}%` : "100%" }}
             />
           </div>
         </div>

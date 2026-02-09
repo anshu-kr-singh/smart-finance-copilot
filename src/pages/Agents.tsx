@@ -2,6 +2,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { AgentCard } from "@/components/dashboard/AgentCard";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAgentStats } from "@/hooks/useAgentStats";
+import { Loader2 } from "lucide-react";
 import {
   Receipt,
   Calculator,
@@ -11,15 +13,11 @@ import {
   BookOpen,
 } from "lucide-react";
 
-const agents = [
+const agentConfigs = [
   {
     name: "GST Agent",
     description: "GSTR-1, 2B matching, ITC reconciliation, and return filing automation",
     icon: Receipt,
-    status: "processing" as const,
-    tasksCompleted: 8,
-    tasksTotal: 12,
-    lastRun: "5 min ago",
     variant: "gst" as const,
     agentType: "gst",
   },
@@ -27,10 +25,6 @@ const agents = [
     name: "Income Tax Agent",
     description: "AIS reconciliation, tax computation, ITR draft generation",
     icon: Calculator,
-    status: "active" as const,
-    tasksCompleted: 15,
-    tasksTotal: 15,
-    lastRun: "2 hours ago",
     variant: "tax" as const,
     agentType: "incometax",
   },
@@ -38,10 +32,6 @@ const agents = [
     name: "Audit Assistant",
     description: "Risk-based sampling, anomaly detection, evidence management",
     icon: ClipboardCheck,
-    status: "idle" as const,
-    tasksCompleted: 0,
-    tasksTotal: 5,
-    lastRun: "Yesterday",
     variant: "audit" as const,
     agentType: "audit",
   },
@@ -49,10 +39,6 @@ const agents = [
     name: "Compliance & ROC",
     description: "Deadline tracking, form drafting, regulatory compliance",
     icon: Building2,
-    status: "alert" as const,
-    tasksCompleted: 3,
-    tasksTotal: 4,
-    lastRun: "30 min ago",
     variant: "compliance" as const,
     agentType: "compliance",
   },
@@ -60,10 +46,6 @@ const agents = [
     name: "Accounting Agent",
     description: "Transaction classification, journal entries, reconciliation",
     icon: BookOpen,
-    status: "active" as const,
-    tasksCompleted: 142,
-    tasksTotal: 150,
-    lastRun: "1 hour ago",
     variant: "accounting" as const,
     agentType: "accounting",
   },
@@ -71,10 +53,6 @@ const agents = [
     name: "FP&A / Advisory",
     description: "Budget analysis, forecasting, scenario planning, insights",
     icon: LineChart,
-    status: "idle" as const,
-    tasksCompleted: 2,
-    tasksTotal: 3,
-    lastRun: "3 days ago",
     variant: "advisory" as const,
     agentType: "advisory",
   },
@@ -83,6 +61,18 @@ const agents = [
 export default function Agents() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getAgentStats, formatLastRun, getAgentStatus, isLoading } = useAgentStats();
+
+  const agents = agentConfigs.map(config => {
+    const stats = getAgentStats(config.agentType);
+    return {
+      ...config,
+      tasksCompleted: stats.completed,
+      tasksTotal: stats.total,
+      status: getAgentStatus(stats),
+      lastRun: formatLastRun(stats.lastActivity),
+    };
+  });
 
   return (
     <div className="flex h-screen bg-background">
@@ -102,11 +92,17 @@ export default function Agents() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {agents.map((agent) => (
-                <AgentCard key={agent.name} {...agent} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {agents.map((agent) => (
+                  <AgentCard key={agent.name} {...agent} />
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>
