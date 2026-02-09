@@ -27,15 +27,13 @@ import {
 } from "lucide-react";
 import asrofyzLogo from "@/assets/asrofyz-logo.png";
 
-const agents = [
+import { useAgentStats } from "@/hooks/useAgentStats";
+
+const getAgentConfigs = (getAgentStats: (type: string) => any, getAgentStatus: (stats: any) => string, formatLastRun: (date: string | null) => string) => [
   {
     name: "GST Agent",
     description: "GSTR-1, 2B matching, ITC reconciliation, and return filing automation",
     icon: Receipt,
-    status: "active" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "gst" as const,
     agentType: "gst",
   },
@@ -43,10 +41,6 @@ const agents = [
     name: "Income Tax Agent",
     description: "AIS reconciliation, tax computation, ITR draft generation",
     icon: Calculator,
-    status: "active" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "tax" as const,
     agentType: "incometax",
   },
@@ -54,10 +48,6 @@ const agents = [
     name: "Audit Assistant",
     description: "Risk-based sampling, anomaly detection, evidence management",
     icon: ClipboardCheck,
-    status: "idle" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "audit" as const,
     agentType: "audit",
   },
@@ -65,10 +55,6 @@ const agents = [
     name: "Compliance & ROC",
     description: "Deadline tracking, form drafting, regulatory compliance",
     icon: Building2,
-    status: "idle" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "compliance" as const,
     agentType: "compliance",
   },
@@ -76,10 +62,6 @@ const agents = [
     name: "Accounting Agent",
     description: "Transaction classification, journal entries, reconciliation",
     icon: BookOpen,
-    status: "active" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "accounting" as const,
     agentType: "accounting",
   },
@@ -87,14 +69,19 @@ const agents = [
     name: "FP&A / Advisory",
     description: "Budget analysis, forecasting, scenario planning, insights",
     icon: LineChart,
-    status: "idle" as const,
-    tasksCompleted: 0,
-    tasksTotal: 0,
-    lastRun: "Ready",
     variant: "advisory" as const,
     agentType: "advisory",
   },
-];
+].map(config => {
+  const stats = getAgentStats(config.agentType);
+  return {
+    ...config,
+    tasksCompleted: stats.completed,
+    tasksTotal: stats.total,
+    status: getAgentStatus(stats) as "active" | "processing" | "idle" | "alert",
+    lastRun: formatLastRun(stats.lastActivity),
+  };
+});
 
 export default function Index() {
   const navigate = useNavigate();
@@ -102,8 +89,12 @@ export default function Index() {
   const { getGreeting, getFirstName } = useProfile();
   const { stats, loading: statsLoading, formatCurrency } = useDashboardStats();
   const { subscription, getRemainingWorkItems } = useSubscription();
+  const { getAgentStats, getAgentStatus, formatLastRun } = useAgentStats();
 
   const remainingItems = getRemainingWorkItems();
+  
+  // Get agents with real data
+  const agents = getAgentConfigs(getAgentStats, getAgentStatus, formatLastRun);
 
   const dynamicStats = [
     {
