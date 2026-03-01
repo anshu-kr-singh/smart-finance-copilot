@@ -56,13 +56,37 @@ export default function AuthPage() {
     });
   };
 
+  const isNetworkAuthError = (message?: string) =>
+    Boolean(message?.toLowerCase().includes("failed to fetch"));
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const runAuthWithRetry = async <T,>(
+    operation: () => Promise<{ data: T; error: { message?: string } | null }>,
+    retries = 2
+  ) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const result = await operation();
+
+      if (!result.error) return result;
+
+      if (!isNetworkAuthError(result.error.message) || attempt === retries) {
+        return result;
+      }
+
+      await wait(400 * (attempt + 1));
+    }
+
+    return operation();
+  };
+
   const formatAuthError = (message?: string) => {
     if (!message) return "Something went wrong. Please try again.";
 
     const normalized = message.toLowerCase();
 
     if (normalized.includes("failed to fetch")) {
-      return "Unable to reach authentication server. Please check internet/VPN and try again.";
+      return "Unable to reach authentication server. Please disable VPN/ad blocker or switch network and try again.";
     }
 
     if (normalized.includes("invalid login credentials")) {
@@ -74,10 +98,18 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.error("You are offline. Please connect to the internet and try again.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await runAuthWithRetry(() =>
+        supabase.auth.signInWithPassword({ email, password })
+      );
 
       if (error) {
         toast.error(formatAuthError(error.message));
@@ -99,17 +131,25 @@ export default function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast.error("You are offline. Please connect to the internet and try again.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: { full_name: fullName }
-        }
-      });
+      const { data, error } = await runAuthWithRetry(() =>
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { full_name: fullName }
+          }
+        })
+      );
 
       if (error) {
         toast.error(formatAuthError(error.message));
