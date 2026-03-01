@@ -56,43 +56,77 @@ export default function AuthPage() {
     });
   };
 
+  const formatAuthError = (message?: string) => {
+    if (!message) return "Something went wrong. Please try again.";
+
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("failed to fetch")) {
+      return "Unable to reach authentication server. Please check internet/VPN and try again.";
+    }
+
+    if (normalized.includes("invalid login credentials")) {
+      return "Invalid email or password.";
+    }
+
+    return message;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        toast.error(formatAuthError(error.message));
+        return;
+      }
+
       if (data.user) {
         await logLoginActivity(data.user.id);
       }
+
       toast.success("Welcome back!");
       navigate("/");
+    } catch (error) {
+      toast.error(formatAuthError(error instanceof Error ? error.message : undefined));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: fullName }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { full_name: fullName }
+        }
+      });
+
+      if (error) {
+        toast.error(formatAuthError(error.message));
+        return;
       }
-    });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Check your email to verify your account!");
+
+      if (data.session) {
+        toast.success("Account created successfully!");
+        navigate("/");
+      } else {
+        toast.success("Check your email to verify your account!");
+      }
+    } catch (error) {
+      toast.error(formatAuthError(error instanceof Error ? error.message : undefined));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (authLoading) {
