@@ -97,10 +97,12 @@ export default function QueryPage() {
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      const scrollElement = scrollRef.current;
-      scrollElement.scrollTop = scrollElement.scrollHeight;
-    }
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
   }, [messages]);
 
   const analyzeTransactionData = (content: string): TransactionAnalysis | undefined => {
@@ -318,6 +320,31 @@ export default function QueryPage() {
     }).format(amount);
   };
 
+  const buildDataContext = useCallback(() => {
+    if (uploadedData.length === 0) return undefined;
+
+    let context = `## UPLOADED DATA (${uploadedData.length} file${uploadedData.length > 1 ? 's' : ''})\n\n`;
+    let totalRows = 0;
+
+    uploadedData.forEach((data, index) => {
+      const rows = data.rowCount || 0;
+      totalRows += rows;
+      context += `### FILE ${index + 1}: ${data.name} (${data.type}, ${rows} rows)\n`;
+      context += "```\n" + data.content + "\n```\n\n";
+      if (data.analysis) {
+        context += `**Pre-Analysis:**\n`;
+        context += `- Total Transactions: ${data.analysis.totalTransactions}\n`;
+        context += `- Total Credit: ₹${data.analysis.totalCredit.toFixed(2)}\n`;
+        context += `- Total Debit: ₹${data.analysis.totalDebit.toFixed(2)}\n`;
+        context += `- Date Range: ${data.analysis.dateRange.start} to ${data.analysis.dateRange.end}\n\n`;
+      }
+    });
+
+    context += `---\n**TOTAL: ${uploadedData.length} files, ${totalRows} data rows.**\n`;
+    context += "INSTRUCTION: Process ALL rows from ALL files. Cross-reference between files where applicable. Show verification at the end.";
+    return context;
+  }, [uploadedData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isLoading) return;
@@ -325,40 +352,16 @@ export default function QueryPage() {
     const message = query;
     setQuery("");
     
-    // Build context from uploaded data
-    let context = "";
-    if (uploadedData.length > 0) {
-      context = "USER'S UPLOADED DATA:\n\n";
-      uploadedData.forEach((data) => {
-        context += `=== ${data.name} (${data.type}) ===\n`;
-        context += data.content + "\n\n";
-        if (data.analysis) {
-          context += `ANALYSIS SUMMARY:\n`;
-          context += `- Total Transactions: ${data.analysis.totalTransactions}\n`;
-          context += `- Total Credit: ₹${data.analysis.totalCredit.toFixed(2)}\n`;
-          context += `- Total Debit: ₹${data.analysis.totalDebit.toFixed(2)}\n`;
-          context += `- Date Range: ${data.analysis.dateRange.start} to ${data.analysis.dateRange.end}\n\n`;
-        }
-      });
-      context += "---\nPlease analyze the above data and respond to the user's query.";
-    }
+    const context = buildDataContext();
     
     await logActivity("query", "ai_agent", undefined, { query: message, agent: selectedAgent });
-    await sendMessage(message, selectedAgent as any, context || undefined);
+    await sendMessage(message, selectedAgent as any, context);
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
-    let context = "";
-    if (uploadedData.length > 0) {
-      context = "USER'S UPLOADED DATA:\n\n";
-      uploadedData.forEach((data) => {
-        context += `=== ${data.name} (${data.type}) ===\n`;
-        context += data.content + "\n\n";
-      });
-      context += "---\nPlease analyze the above data and respond to the user's query.";
-    }
+    const context = buildDataContext();
     await logActivity("query", "ai_agent", undefined, { query: suggestion, agent: selectedAgent });
-    await sendMessage(suggestion, selectedAgent as any, context || undefined);
+    await sendMessage(suggestion, selectedAgent as any, context);
   };
 
   const copyToClipboard = (text: string, index: number) => {
@@ -556,11 +559,11 @@ export default function QueryPage() {
 
           {/* Chat Area */}
           <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div 
-                ref={scrollRef} 
-                className="max-w-4xl mx-auto px-6 py-6 space-y-6"
-              >
+            <div
+              ref={scrollRef}
+              className="h-full overflow-y-auto"
+            >
+              <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
                 {messages.length === 0 ? (
                   /* Empty State with Suggestions */
                   <div className="space-y-6 animate-fade-in">
@@ -737,7 +740,7 @@ export default function QueryPage() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
 
           {/* Input Area */}
