@@ -231,6 +231,24 @@ export default function AgentChat() {
     setUploadedData(prev => prev.filter(d => d.id !== id));
   };
 
+  const buildDataContext = useCallback(() => {
+    if (uploadedData.length === 0) return undefined;
+
+    let context = `## UPLOADED DATA (${uploadedData.length} file${uploadedData.length > 1 ? 's' : ''})\n\n`;
+    let totalRows = 0;
+
+    uploadedData.forEach((data, index) => {
+      const rows = data.rowCount || 0;
+      totalRows += rows;
+      context += `### FILE ${index + 1}: ${data.name} (${data.type}, ${rows} rows)\n`;
+      context += "```\n" + data.content + "\n```\n\n";
+    });
+
+    context += `---\n**TOTAL: ${uploadedData.length} files, ${totalRows} data rows.**\n`;
+    context += "INSTRUCTION: Process ALL rows from ALL files. Cross-reference between files where applicable. Show verification at the end.";
+    return context;
+  }, [uploadedData]);
+
   if (!agent) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -244,18 +262,8 @@ export default function AgentChat() {
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
     
-    // Build context from uploaded data
-    let context = "";
-    if (uploadedData.length > 0) {
-      context = "USER'S UPLOADED DATA:\n\n";
-      uploadedData.forEach((data, index) => {
-        context += `=== ${data.name} (${data.type}) ===\n`;
-        context += data.content + "\n\n";
-      });
-      context += "---\nPlease analyze the above data and respond to the user's query.";
-    }
-
-    sendMessage(input, agentType as AgentType, context || undefined);
+    const context = buildDataContext();
+    sendMessage(input, agentType as AgentType, context);
     setInput("");
   };
 
@@ -267,16 +275,8 @@ export default function AgentChat() {
   };
 
   const handleSuggestedQuestion = (question: string) => {
-    let context = "";
-    if (uploadedData.length > 0) {
-      context = "USER'S UPLOADED DATA:\n\n";
-      uploadedData.forEach((data) => {
-        context += `=== ${data.name} (${data.type}) ===\n`;
-        context += data.content + "\n\n";
-      });
-      context += "---\nPlease analyze the above data and respond to the user's query.";
-    }
-    sendMessage(question, agentType as AgentType, context || undefined);
+    const context = buildDataContext();
+    sendMessage(question, agentType as AgentType, context);
   };
 
   const copyToClipboard = (text: string, index: number) => {
