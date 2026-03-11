@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 import { useTaxAgent } from "@/hooks/useTaxAgent";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 interface UploadedData {
   id: string;
