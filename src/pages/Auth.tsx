@@ -21,7 +21,7 @@ import {
   BookOpen,
   Bot
 } from "lucide-react";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 const features = [
   { icon: Receipt, title: "GST Agent", description: "GSTR-1, 2B matching & ITC reconciliation" },
@@ -189,13 +189,13 @@ export default function AuthPage() {
           {/* Logo */}
           <div className="flex items-center gap-4 mb-12">
             <img 
-              src={asrofyzLogo} 
-              alt="Asrofyz CA Logo" 
+              src={apnaCaLogo} 
+              alt="Apna CA Logo" 
               className="w-20 h-20 object-contain drop-shadow-2xl"
             />
             <div>
-              <h1 className="text-2xl font-display font-bold text-white">Asrofyz CA</h1>
-              <p className="text-sm text-white/70">Professional CA Practice • Est. 2026</p>
+              <h1 className="text-2xl font-display font-bold text-white">Apna CA</h1>
+              <p className="text-sm text-white/70">Your Smart CA Assistant</p>
             </div>
           </div>
 
@@ -246,13 +246,13 @@ export default function AuthPage() {
           {/* Mobile Logo */}
           <div className="flex flex-col items-center justify-center gap-3 mb-8 lg:hidden">
             <img 
-              src={asrofyzLogo} 
-              alt="Asrofyz CA Logo" 
+              src={apnaCaLogo} 
+              alt="Apna CA Logo" 
               className="w-24 h-24 object-contain"
             />
             <div className="text-center">
-              <h1 className="text-2xl font-display font-bold text-foreground">Asrofyz CA</h1>
-              <p className="text-sm text-muted-foreground">Est. 2026 • Professional Practice</p>
+              <h1 className="text-2xl font-display font-bold text-foreground">Apna CA</h1>
+              <p className="text-sm text-muted-foreground">Your Smart CA Assistant</p>
             </div>
           </div>
 

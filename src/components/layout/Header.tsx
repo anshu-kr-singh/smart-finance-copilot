@@ -1,9 +1,10 @@
-import { Bell, Search, LogOut, Settings, User } from "lucide-react";
+import { Bell, Search, LogOut, Settings, User, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProfile } from "@/hooks/useProfile";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/ThemeProvider";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -17,6 +18,7 @@ export function Header() {
   const { profile, getInitials } = useProfile();
   const { unreadCount } = useNotifications();
   const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -47,6 +49,17 @@ export function Header() {
           <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
           <span className="text-sm font-medium text-success">All Systems Active</span>
         </div>
+
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="rounded-full"
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </Button>
 
         {/* Notifications */}
         <Button 

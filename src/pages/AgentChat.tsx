@@ -613,7 +613,7 @@ export default function AgentChat() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Asrofyz CA • AI responses are for guidance only. Always verify with a practicing CA.
+                Apna CA • Your Smart CA Assistant • AI responses are for guidance only. Always verify with a practicing CA.
               </p>
             </div>
           </div>

@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 import { useTaxAgent } from "@/hooks/useTaxAgent";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 interface UploadedData {
   id: string;
@@ -572,12 +572,12 @@ export default function QueryPage() {
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <img 
-                            src={asrofyzLogo} 
-                            alt="Asrofyz CA" 
+                            src={apnaCaLogo} 
+                            alt="Apna CA" 
                             className="w-12 h-12 object-contain rounded-lg"
                           />
                           <div>
-                            <h3 className="font-semibold mb-2">Welcome to Asrofyz CA AI Assistant</h3>
+                            <h3 className="font-semibold mb-2">Welcome to Apna CA AI Assistant</h3>
                             <p className="text-muted-foreground text-sm leading-relaxed">
                               I can help you with GST, Income Tax, Audit, Compliance, and Financial Analysis.
                               Upload your data files (Paytm statements, bank transactions, invoices) and I'll analyze them for you.
@@ -788,7 +788,7 @@ export default function QueryPage() {
                 </Button>
               </form>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Asrofyz CA Est. 2026 • AI responses are for guidance only. Always verify with a practicing CA.
+                Apna CA • Your Smart CA Assistant • AI responses are for guidance only. Always verify with a practicing CA.
               </p>
             </div>
           </div>

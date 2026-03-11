@@ -25,7 +25,7 @@ import {
   Users,
   Briefcase,
 } from "lucide-react";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 import { useAgentStats } from "@/hooks/useAgentStats";
 
@@ -142,8 +142,8 @@ export default function Index() {
             {/* Welcome Section */}
             <div className="mb-8 flex items-center gap-4">
               <img 
-                src={asrofyzLogo} 
-                alt="Asrofyz CA" 
+                src={apnaCaLogo} 
+                alt="Apna CA" 
                 className="w-16 h-16 object-contain rounded-lg shadow-lg hidden md:block"
               />
               <div>
