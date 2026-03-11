@@ -246,13 +246,13 @@ export default function AuthPage() {
           {/* Mobile Logo */}
           <div className="flex flex-col items-center justify-center gap-3 mb-8 lg:hidden">
             <img 
-              src={asrofyzLogo} 
-              alt="Asrofyz CA Logo" 
+              src={apnaCaLogo} 
+              alt="Apna CA Logo" 
               className="w-24 h-24 object-contain"
             />
             <div className="text-center">
-              <h1 className="text-2xl font-display font-bold text-foreground">Asrofyz CA</h1>
-              <p className="text-sm text-muted-foreground">Est. 2026 • Professional Practice</p>
+              <h1 className="text-2xl font-display font-bold text-foreground">Apna CA</h1>
+              <p className="text-sm text-muted-foreground">Your Smart CA Assistant</p>
             </div>
           </div>
 

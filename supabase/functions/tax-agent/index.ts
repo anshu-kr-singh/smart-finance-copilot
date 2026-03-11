@@ -115,7 +115,7 @@ At the end of EVERY response involving calculations:
 ═══════════════════
 \`\`\`
 
-Platform: Asrofyz CA | Professional CA Practice Management | Data processed with full audit trail`;
+Platform: Apna CA | Your Smart CA Assistant | Data processed with full audit trail`;
 
 // ─── AGENT-SPECIFIC ENHANCEMENT PROMPTS ─────────────────────────────────────
 const AGENT_PROMPTS: Record<string, string> = {

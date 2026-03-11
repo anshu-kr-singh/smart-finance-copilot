@@ -788,7 +788,7 @@ export default function QueryPage() {
                 </Button>
               </form>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Asrofyz CA Est. 2026 • AI responses are for guidance only. Always verify with a practicing CA.
+                Apna CA • Your Smart CA Assistant • AI responses are for guidance only. Always verify with a practicing CA.
               </p>
             </div>
           </div>
