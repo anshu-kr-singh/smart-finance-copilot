@@ -572,12 +572,12 @@ export default function QueryPage() {
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <img 
-                            src={asrofyzLogo} 
-                            alt="Asrofyz CA" 
+                            src={apnaCaLogo} 
+                            alt="Apna CA" 
                             className="w-12 h-12 object-contain rounded-lg"
                           />
                           <div>
-                            <h3 className="font-semibold mb-2">Welcome to Asrofyz CA AI Assistant</h3>
+                            <h3 className="font-semibold mb-2">Welcome to Apna CA AI Assistant</h3>
                             <p className="text-muted-foreground text-sm leading-relaxed">
                               I can help you with GST, Income Tax, Audit, Compliance, and Financial Analysis.
                               Upload your data files (Paytm statements, bank transactions, invoices) and I'll analyze them for you.
