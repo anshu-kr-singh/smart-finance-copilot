@@ -1,6 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
+    <script>
+      (function() {
+        var theme = localStorage.getItem('apna-ca-theme');
+        if (!theme) theme = 'dark';
+        document.documentElement.className = theme;
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apna CA - Your Smart CA Assistant | AI-Powered Practice Management</title>
