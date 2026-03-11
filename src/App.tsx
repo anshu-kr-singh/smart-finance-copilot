@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
 import AuthPage from "./pages/Auth";
 import ClientsPage from "./pages/Clients";
@@ -24,29 +25,31 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-          <Route path="/work" element={<ProtectedRoute><WorkPage /></ProtectedRoute>} />
-          <Route path="/work/:id" element={<ProtectedRoute><WorkDetailPage /></ProtectedRoute>} />
-          <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
-          <Route path="/agents/:agentType" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
-          <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
-          <Route path="/query" element={<ProtectedRoute><QueryPage /></ProtectedRoute>} />
-          <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-          <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+            <Route path="/work" element={<ProtectedRoute><WorkPage /></ProtectedRoute>} />
+            <Route path="/work/:id" element={<ProtectedRoute><WorkDetailPage /></ProtectedRoute>} />
+            <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+            <Route path="/agents/:agentType" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
+            <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+            <Route path="/query" element={<ProtectedRoute><QueryPage /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
