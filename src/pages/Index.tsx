@@ -25,7 +25,7 @@ import {
   Users,
   Briefcase,
 } from "lucide-react";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 import { useAgentStats } from "@/hooks/useAgentStats";
 
