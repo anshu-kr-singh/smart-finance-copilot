@@ -21,7 +21,7 @@ import {
   BookOpen,
   Bot
 } from "lucide-react";
-import asrofyzLogo from "@/assets/asrofyz-logo.png";
+import apnaCaLogo from "@/assets/apna-ca-logo.png";
 
 const features = [
   { icon: Receipt, title: "GST Agent", description: "GSTR-1, 2B matching & ITC reconciliation" },
