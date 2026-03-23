@@ -367,6 +367,7 @@ export default function AuthPage() {
                     </p>
                   </form>
                 </TabsContent>
+                </div>
               </Tabs>
             </CardContent>
           </Card>
