@@ -315,7 +315,7 @@ export default function AuthPage() {
                   </form>
                 </TabsContent>
                 
-                <TabsContent value="signup" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out' }}>
+                <TabsContent value="signup" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out', transformStyle: 'preserve-3d' }}>
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">Full Name</Label>
