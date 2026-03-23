@@ -267,19 +267,19 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Card className="shadow-xl border-border/50">
+          <Card className="shadow-xl border-border/50" style={{ animation: pageReady ? 'cardEntrance 0.6s ease-out forwards' : 'none', opacity: pageReady ? 1 : 0 }}>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-display">Welcome</CardTitle>
               <CardDescription>Sign in to manage your CA practice</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => { setTabAnimating(true); setActiveTab(v); setTimeout(() => setTabAnimating(false), 50); }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  <TabsTrigger value="login" className="transition-all duration-200">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup" className="transition-all duration-200">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="login">
+                <TabsContent value="login" className="data-[state=active]:animate-[slideUp_0.3s_ease-out]">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
