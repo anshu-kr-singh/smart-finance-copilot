@@ -273,13 +273,14 @@ export default function AuthPage() {
               <CardDescription>Sign in to manage your CA practice</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={(v) => { setTabAnimating(true); setActiveTab(v); setTimeout(() => setTabAnimating(false), 50); }} className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login" className="transition-all duration-200">Sign In</TabsTrigger>
                   <TabsTrigger value="signup" className="transition-all duration-200">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="login" className="data-[state=active]:animate-[slideUp_0.3s_ease-out]">
+                <div style={{ perspective: '1200px' }}>
+                <TabsContent value="login" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out' }}>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
