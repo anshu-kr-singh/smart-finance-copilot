@@ -39,8 +39,9 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [flipKey, setFlipKey] = useState(0);
+  const [flipDirection, setFlipDirection] = useState<"forward" | "backward">("forward");
   const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
