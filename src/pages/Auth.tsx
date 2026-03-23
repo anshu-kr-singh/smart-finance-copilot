@@ -191,7 +191,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding & Features */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between relative overflow-hidden" style={{ animation: 'fadeIn 0.8s ease-out' }}>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl" />
