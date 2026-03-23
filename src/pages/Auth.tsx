@@ -39,6 +39,15 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [activeTab, setActiveTab] = useState("login");
+  const [tabAnimating, setTabAnimating] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setPageReady(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
