@@ -168,6 +168,7 @@ export default function AuthPage() {
 
       if (data.session) {
         toast.success("Account created successfully!");
+        sessionStorage.removeItem("splash_shown");
         navigate("/");
       } else {
         toast.success("Check your email to verify your account!");
