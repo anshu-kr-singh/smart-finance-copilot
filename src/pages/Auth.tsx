@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +39,15 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [activeTab, setActiveTab] = useState("login");
+  const [tabAnimating, setTabAnimating] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setPageReady(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -121,6 +130,7 @@ export default function AuthPage() {
       }
 
       toast.success("Welcome back!");
+      sessionStorage.removeItem("splash_shown");
       navigate("/");
     } catch (error) {
       toast.error(formatAuthError(error instanceof Error ? error.message : undefined));
@@ -158,6 +168,7 @@ export default function AuthPage() {
 
       if (data.session) {
         toast.success("Account created successfully!");
+        sessionStorage.removeItem("splash_shown");
         navigate("/");
       } else {
         toast.success("Check your email to verify your account!");
@@ -180,7 +191,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding & Features */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between relative overflow-hidden" style={{ animation: 'fadeIn 0.8s ease-out' }}>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl" />
@@ -256,19 +267,19 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Card className="shadow-xl border-border/50">
+          <Card className="shadow-xl border-border/50" style={{ animation: pageReady ? 'cardEntrance 0.6s ease-out forwards' : 'none', opacity: pageReady ? 1 : 0 }}>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-display">Welcome</CardTitle>
               <CardDescription>Sign in to manage your CA practice</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => { setTabAnimating(true); setActiveTab(v); setTimeout(() => setTabAnimating(false), 50); }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  <TabsTrigger value="login" className="transition-all duration-200">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup" className="transition-all duration-200">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="login">
+                <TabsContent value="login" className="data-[state=active]:animate-[slideUp_0.3s_ease-out]">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
@@ -304,7 +315,7 @@ export default function AuthPage() {
                   </form>
                 </TabsContent>
                 
-                <TabsContent value="signup">
+                <TabsContent value="signup" className="data-[state=active]:animate-[slideUp_0.3s_ease-out]">
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">Full Name</Label>
