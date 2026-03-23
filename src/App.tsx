@@ -20,10 +20,23 @@ import CompliancePage from "./pages/Compliance";
 import NotificationsPage from "./pages/Notifications";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { useState, useCallback } from "react";
+import SplashScreen from "./components/SplashScreen";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    const seen = sessionStorage.getItem("splash_shown");
+    return !seen;
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    sessionStorage.setItem("splash_shown", "1");
+    setShowSplash(false);
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <TooltipProvider>
