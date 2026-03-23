@@ -40,8 +40,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [activeTab, setActiveTab] = useState("login");
-  const [tabAnimating, setTabAnimating] = useState(false);
-  const [showTransition, setShowTransition] = useState(false);
+  const [flipKey, setFlipKey] = useState(0);
   const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
@@ -273,14 +272,14 @@ export default function AuthPage() {
               <CardDescription>Sign in to manage your CA practice</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); }} className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setFlipKey(k => k + 1); }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login" className="transition-all duration-200">Sign In</TabsTrigger>
                   <TabsTrigger value="signup" className="transition-all duration-200">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                <div style={{ perspective: '1200px' }}>
-                <TabsContent value="login" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out' }}>
+                <div style={{ perspective: '1200px' }} key={flipKey}>
+                <TabsContent value="login" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out', transformStyle: 'preserve-3d' }}>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
@@ -316,7 +315,7 @@ export default function AuthPage() {
                   </form>
                 </TabsContent>
                 
-                <TabsContent value="signup" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out' }}>
+                <TabsContent value="signup" className="mt-0" style={{ animation: 'pageFlipIn 0.5s ease-out', transformStyle: 'preserve-3d' }}>
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">Full Name</Label>
