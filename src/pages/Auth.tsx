@@ -49,6 +49,13 @@ export default function AuthPage() {
     return () => clearTimeout(t);
   }, []);
 
+  const handleTabChange = (value: string) => {
+    const nextTab = value as "login" | "signup";
+    setFlipDirection(nextTab === "signup" ? "forward" : "backward");
+    setActiveTab(nextTab);
+    setFlipKey((current) => current + 1);
+  };
+
   // Redirect if already logged in
   useEffect(() => {
     if (user && !authLoading) {
