@@ -40,8 +40,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [activeTab, setActiveTab] = useState("login");
-  const [tabAnimating, setTabAnimating] = useState(false);
-  const [showTransition, setShowTransition] = useState(false);
+  const [flipKey, setFlipKey] = useState(0);
   const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
