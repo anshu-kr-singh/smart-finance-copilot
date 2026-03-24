@@ -20,7 +20,8 @@ import CompliancePage from "./pages/Compliance";
 import NotificationsPage from "./pages/Notifications";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import SplashScreen from "./components/SplashScreen";
 
 const queryClient = new QueryClient();
