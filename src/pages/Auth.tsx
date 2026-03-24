@@ -137,7 +137,7 @@ export default function AuthPage() {
       }
 
       toast.success("Welcome back!");
-      sessionStorage.removeItem("splash_shown");
+      sessionStorage.setItem("show_splash_after_auth", "1");
       navigate("/");
     } catch (error) {
       toast.error(formatAuthError(error instanceof Error ? error.message : undefined));
@@ -175,7 +175,7 @@ export default function AuthPage() {
 
       if (data.session) {
         toast.success("Account created successfully!");
-        sessionStorage.removeItem("splash_shown");
+        sessionStorage.setItem("show_splash_after_auth", "1");
         navigate("/");
       } else {
         toast.success("Check your email to verify your account!");
