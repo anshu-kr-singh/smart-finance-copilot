@@ -28,6 +28,11 @@ const queryClient = new QueryClient();
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
     const seen = sessionStorage.getItem("splash_shown");
+    const postAuth = sessionStorage.getItem("show_splash_after_auth");
+    if (postAuth) {
+      sessionStorage.removeItem("show_splash_after_auth");
+      return true;
+    }
     return !seen;
   });
 
