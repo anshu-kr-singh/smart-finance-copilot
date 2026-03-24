@@ -137,7 +137,7 @@ export default function AuthPage() {
       }
 
       toast.success("Welcome back!");
-      sessionStorage.removeItem("splash_shown");
+      sessionStorage.setItem("show_splash_after_auth", "1");
       navigate("/");
     } catch (error) {
       toast.error(formatAuthError(error instanceof Error ? error.message : undefined));
