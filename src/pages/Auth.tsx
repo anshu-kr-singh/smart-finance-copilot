@@ -8,29 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { 
-  Calculator, 
-  Shield, 
-  Loader2, 
-  Receipt, 
-  ClipboardCheck, 
-  Building2, 
+import {
+  Calculator,
+  Shield,
+  Loader2,
+  Receipt,
+  ClipboardCheck,
+  Building2,
   LineChart,
   CheckCircle2,
   Sparkles,
   BookOpen,
-  Bot
+  Bot,
+  ArrowRight,
 } from "lucide-react";
 import apnaCaLogo from "@/assets/apna-ca-logo.png";
-
-const features = [
-  { icon: Receipt, title: "GST Agent", description: "GSTR-1, 2B matching & ITC reconciliation" },
-  { icon: Calculator, title: "Income Tax Agent", description: "AIS reconciliation & ITR drafts" },
-  { icon: ClipboardCheck, title: "Audit Assistant", description: "Risk sampling & evidence management" },
-  { icon: Building2, title: "ROC Compliance", description: "Deadline tracking & form drafting" },
-  { icon: BookOpen, title: "Accounting Agent", description: "Auto classification & reconciliation" },
-  { icon: LineChart, title: "FP&A Advisory", description: "Budget analysis & forecasting" },
-];
+import { AuthLeftPanel } from "@/components/auth/AuthLeftPanel";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -56,7 +50,6 @@ export default function AuthPage() {
     setFlipKey((current) => current + 1);
   };
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user && !authLoading) {
       navigate("/");
@@ -83,59 +76,36 @@ export default function AuthPage() {
   ) => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       const result = await operation();
-
       if (!result.error) return result;
-
-      if (!isNetworkAuthError(result.error.message) || attempt === retries) {
-        return result;
-      }
-
+      if (!isNetworkAuthError(result.error.message) || attempt === retries) return result;
       await wait(400 * (attempt + 1));
     }
-
     return operation();
   };
 
   const formatAuthError = (message?: string) => {
     if (!message) return "Something went wrong. Please try again.";
-
     const normalized = message.toLowerCase();
-
-    if (normalized.includes("failed to fetch")) {
+    if (normalized.includes("failed to fetch"))
       return "Unable to reach authentication server. Please disable VPN/ad blocker or switch network and try again.";
-    }
-
-    if (normalized.includes("invalid login credentials")) {
+    if (normalized.includes("invalid login credentials"))
       return "Invalid email or password.";
-    }
-
     return message;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       toast.error("You are offline. Please connect to the internet and try again.");
       return;
     }
-
     setLoading(true);
-
     try {
       const { data, error } = await runAuthWithRetry(() =>
         supabase.auth.signInWithPassword({ email, password })
       );
-
-      if (error) {
-        toast.error(formatAuthError(error.message));
-        return;
-      }
-
-      if (data.user) {
-        await logLoginActivity(data.user.id);
-      }
-
+      if (error) { toast.error(formatAuthError(error.message)); return; }
+      if (data.user) await logLoginActivity(data.user.id);
       toast.success("Welcome back!");
       sessionStorage.setItem("show_splash_after_auth", "1");
       navigate("/");
@@ -148,14 +118,11 @@ export default function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       toast.error("You are offline. Please connect to the internet and try again.");
       return;
     }
-
     setLoading(true);
-
     try {
       const { data, error } = await runAuthWithRetry(() =>
         supabase.auth.signUp({
@@ -167,12 +134,7 @@ export default function AuthPage() {
           }
         })
       );
-
-      if (error) {
-        toast.error(formatAuthError(error.message));
-        return;
-      }
-
+      if (error) { toast.error(formatAuthError(error.message)); return; }
       if (data.session) {
         toast.success("Account created successfully!");
         sessionStorage.setItem("show_splash_after_auth", "1");
@@ -189,84 +151,43 @@ export default function AuthPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div style={{ animation: "authSpinPulse 1.5s ease-in-out infinite" }}>
+          <Loader2 className="w-10 h-10 text-primary" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding & Features */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between relative overflow-hidden" style={{ animation: 'fadeIn 0.8s ease-out' }}>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl" />
-        
-        <div className="relative z-10">
-          {/* Logo */}
-          <div className="flex items-center gap-4 mb-12">
-            <img 
-              src={apnaCaLogo} 
-              alt="Apna CA Logo" 
-              className="w-20 h-20 object-contain drop-shadow-2xl"
-            />
-            <div>
-              <h1 className="text-2xl font-display font-bold text-white">Apna CA</h1>
-              <p className="text-sm text-white/70">Your Smart CA Assistant</p>
-            </div>
-          </div>
-
-          {/* Hero Text */}
-          <div className="mb-12">
-            <h2 className="text-4xl font-display font-bold text-white mb-4 leading-tight">
-              Professional CA Practice, Powered by AI
-            </h2>
-            <p className="text-lg text-white/80 max-w-md">
-              Real industry work with intelligent agents. Upload data, process GST returns, reconcile accounts, and generate professional outputs.
-            </p>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {features.map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 backdrop-blur">
-                  <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white text-sm">{feature.title}</h3>
-                    <p className="text-xs text-white/60">{feature.description}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bottom Section */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-white/10 backdrop-blur">
-            <Sparkles className="w-6 h-6 text-accent" />
-            <div>
-              <p className="font-semibold text-white">Start Free</p>
-              <p className="text-sm text-white/70">First 5 work items are completely free</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex overflow-hidden">
+      {/* Left Panel */}
+      <AuthLeftPanel pageReady={pageReady} />
 
       {/* Right Panel - Auth Form */}
-      <div className="w-full lg:w-1/2 bg-background flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
+      <div className="w-full lg:w-1/2 bg-background flex items-center justify-center p-8 relative">
+        {/* Floating orbs background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-primary/5 blur-3xl"
+            style={{ animation: "authOrb1 8s ease-in-out infinite" }} />
+          <div className="absolute bottom-20 left-10 w-48 h-48 rounded-full bg-accent/5 blur-3xl"
+            style={{ animation: "authOrb2 10s ease-in-out infinite" }} />
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
           {/* Mobile Logo */}
-          <div className="flex flex-col items-center justify-center gap-3 mb-8 lg:hidden">
-            <img 
-              src={apnaCaLogo} 
-              alt="Apna CA Logo" 
+          <div className="flex flex-col items-center justify-center gap-3 mb-8 lg:hidden"
+            style={{
+              opacity: pageReady ? 1 : 0,
+              transform: pageReady ? "translateY(0) scale(1)" : "translateY(-20px) scale(0.9)",
+              transition: "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+          >
+            <img
+              src={apnaCaLogo}
+              alt="Apna CA Logo"
               className="w-24 h-24 object-contain"
+              style={{ animation: pageReady ? "auth3DLogo 1s cubic-bezier(0.34, 1.56, 0.64, 1)" : "none" }}
             />
             <div className="text-center">
               <h1 className="text-2xl font-display font-bold text-foreground">Apna CA</h1>
@@ -274,16 +195,47 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Card className="shadow-xl border-border/50" style={{ animation: pageReady ? 'cardEntrance 0.6s ease-out forwards' : 'none', opacity: pageReady ? 1 : 0 }}>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-display">Welcome</CardTitle>
-              <CardDescription>Sign in to manage your CA practice</CardDescription>
+          <Card
+            className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95 overflow-hidden"
+            style={{
+              opacity: pageReady ? 1 : 0,
+              transform: pageReady
+                ? "perspective(1200px) rotateX(0deg) translateY(0)"
+                : "perspective(1200px) rotateX(-8deg) translateY(40px)",
+              transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s",
+            }}
+          >
+            {/* Top gradient bar */}
+            <div className="h-1 w-full gradient-primary" style={{
+              animation: pageReady ? "authBarSlide 0.8s ease-out 0.5s both" : "none",
+            }} />
+
+            <CardHeader className="text-center pb-2">
+              <CardTitle
+                className="text-2xl font-display"
+                style={{
+                  opacity: pageReady ? 1 : 0,
+                  transform: pageReady ? "translateY(0)" : "translateY(10px)",
+                  transition: "all 0.5s ease-out 0.4s",
+                }}
+              >
+                Welcome
+              </CardTitle>
+              <CardDescription
+                style={{
+                  opacity: pageReady ? 1 : 0,
+                  transform: pageReady ? "translateY(0)" : "translateY(10px)",
+                  transition: "all 0.5s ease-out 0.5s",
+                }}
+              >
+                Sign in to manage your CA practice
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" className="transition-all duration-200">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup" className="transition-all duration-200">Sign Up</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 mb-6 relative overflow-hidden">
+                  <TabsTrigger value="login" className="transition-all duration-300 z-10">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup" className="transition-all duration-300 z-10">Sign Up</TabsTrigger>
                 </TabsList>
 
                 <div className="overflow-hidden rounded-xl" style={{ perspective: "1600px" }}>
@@ -291,96 +243,26 @@ export default function AuthPage() {
                     key={flipKey}
                     className="origin-center rounded-xl"
                     style={{
-                      animation: flipDirection === "forward" ? "pageFlipForward 0.7s cubic-bezier(0.22, 1, 0.36, 1)" : "pageFlipBackward 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                      animation:
+                        flipDirection === "forward"
+                          ? "pageFlipForward 0.7s cubic-bezier(0.22, 1, 0.36, 1)"
+                          : "pageFlipBackward 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
                       transformStyle: "preserve-3d",
                       backfaceVisibility: "hidden",
                     }}
                   >
-                    {activeTab === "login" ? (
-                      <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="login-email">Email</Label>
-                          <Input
-                            id="login-email"
-                            type="email"
-                            placeholder="ca@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="login-password">Password</Label>
-                          <Input
-                            id="login-password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                          {loading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Signing in...
-                            </>
-                          ) : (
-                            "Sign In"
-                          )}
-                        </Button>
-                      </form>
-                    ) : (
-                      <form onSubmit={handleSignup} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-name">Full Name</Label>
-                          <Input
-                            id="signup-name"
-                            type="text"
-                            placeholder="CA Rajesh Kumar"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-email">Email</Label>
-                          <Input
-                            id="signup-email"
-                            type="email"
-                            placeholder="ca@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-password">Password</Label>
-                          <Input
-                            id="signup-password"
-                            type="password"
-                            placeholder="Min 6 characters"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={6}
-                          />
-                        </div>
-                        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                          {loading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Creating account...
-                            </>
-                          ) : (
-                            "Create Free Account"
-                          )}
-                        </Button>
-                        <p className="text-xs text-center text-muted-foreground">
-                          Get 5 free work items • No credit card required
-                        </p>
-                      </form>
-                    )}
+                    <AuthForm
+                      activeTab={activeTab}
+                      email={email}
+                      password={password}
+                      fullName={fullName}
+                      loading={loading}
+                      onEmailChange={setEmail}
+                      onPasswordChange={setPassword}
+                      onFullNameChange={setFullName}
+                      onLogin={handleLogin}
+                      onSignup={handleSignup}
+                    />
                   </div>
                 </div>
               </Tabs>
@@ -388,16 +270,23 @@ export default function AuthPage() {
           </Card>
 
           {/* Trust Badges */}
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
+          <div
+            className="mt-6 flex items-center justify-center gap-6 text-sm text-muted-foreground"
+            style={{
+              opacity: pageReady ? 1 : 0,
+              transform: pageReady ? "translateY(0)" : "translateY(15px)",
+              transition: "all 0.6s ease-out 0.7s",
+            }}
+          >
+            <div className="flex items-center gap-1.5 transition-all duration-300 hover:text-primary hover:scale-105 cursor-default">
               <Shield className="w-4 h-4" />
               <span>Secure</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 transition-all duration-300 hover:text-primary hover:scale-105 cursor-default">
               <CheckCircle2 className="w-4 h-4" />
               <span>GDPR Compliant</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 transition-all duration-300 hover:text-primary hover:scale-105 cursor-default">
               <Calculator className="w-4 h-4" />
               <span>For CAs</span>
             </div>
