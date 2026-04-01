@@ -212,6 +212,9 @@ export default function Index() {
               </div>
             )}
 
+            {/* Smart Assistant */}
+            <SmartAssistantPanel />
+
             {/* Query Interface */}
             <QueryInterface />
 
