@@ -30,20 +30,20 @@ interface NavItem {
   badge?: number;
 }
 
-const navItems: NavItem[] = [
+const baseNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Building2, label: "Clients", href: "/clients" },
   { icon: Briefcase, label: "Work", href: "/work" },
   { icon: Bot, label: "AI Agents", href: "/agents" },
   { icon: Upload, label: "Upload Data", href: "/upload" },
   { icon: MessageSquare, label: "Ask Query", href: "/query" },
-  { icon: FileCheck, label: "Approvals", href: "/approvals", badge: 3 },
+  { icon: FileCheck, label: "Approvals", href: "/approvals" },
   { icon: TrendingUp, label: "Reports", href: "/reports" },
   { icon: Shield, label: "Compliance", href: "/compliance" },
 ];
 
-const bottomItems: NavItem[] = [
-  { icon: Bell, label: "Notifications", href: "/notifications", badge: 5 },
+const baseBottomItems = [
+  { icon: Bell, label: "Notifications", href: "/notifications" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
@@ -55,11 +55,37 @@ interface SidebarProps {
 export function Sidebar({ activeItem = "/", onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { subscription, getRemainingWorkItems } = useSubscription();
+  const { unreadCount } = useNotifications();
+  const { activities } = useActivityLog();
   const [mounted, setMounted] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const remaining = getRemainingWorkItems();
   const isPro = subscription?.plan !== "free";
+
+  // Count today's activities
+  const recentActivityCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return activities.filter(a => new Date(a.created_at) >= today).length;
+  }, [activities]);
+
+  // Build nav items with real badge counts
+  const navItems: NavItem[] = useMemo(() => 
+    baseNavItems.map(item => ({
+      ...item,
+      badge: item.href === "/approvals" ? recentActivityCount || undefined : undefined,
+    })),
+    [recentActivityCount]
+  );
+
+  const bottomItems: NavItem[] = useMemo(() => 
+    baseBottomItems.map(item => ({
+      ...item,
+      badge: item.href === "/notifications" ? unreadCount || undefined : undefined,
+    })),
+    [unreadCount]
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
