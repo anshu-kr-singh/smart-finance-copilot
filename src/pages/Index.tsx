@@ -6,6 +6,7 @@ import { QueryInterface } from "@/components/dashboard/QueryInterface";
 import { ApprovalQueue } from "@/components/dashboard/ApprovalQueue";
 import { UploadCard } from "@/components/dashboard/UploadCard";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { SmartAssistantPanel } from "@/components/dashboard/SmartAssistantPanel";
 import { UsageBanner } from "@/components/subscription/UsageBanner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
@@ -210,6 +211,9 @@ export default function Index() {
                 </div>
               </div>
             )}
+
+            {/* Smart Assistant */}
+            <SmartAssistantPanel />
 
             {/* Query Interface */}
             <QueryInterface />
