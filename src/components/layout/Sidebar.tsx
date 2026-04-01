@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useActivityLog } from "@/hooks/useActivityLog";
 import {
   LayoutDashboard,
   Bot,
