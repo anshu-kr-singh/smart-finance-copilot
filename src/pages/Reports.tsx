@@ -81,7 +81,7 @@ export default function ReportsPage() {
     
     const { data, error } = await supabase.from("reports").insert({
       user_id: user.id,
-      client_id: formData.client_id || null,
+      client_id: formData.client_id && formData.client_id !== "all" ? formData.client_id : null,
       title,
       description: `Generated ${formData.report_type} report`,
       report_type: formData.report_type,
