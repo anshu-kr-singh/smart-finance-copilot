@@ -208,7 +208,7 @@ export default function ReportsPage() {
                       >
                         <SelectTrigger><SelectValue placeholder="All clients" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All clients</SelectItem>
+                          <SelectItem value="all">All clients</SelectItem>
                           {clients.map(c => (
                             <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
                           ))}
