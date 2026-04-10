@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Upload, FileSpreadsheet, FileText, Database, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const supportedFormats = [
   { icon: FileSpreadsheet, label: "Excel", ext: ".xlsx, .xls" },
@@ -10,6 +11,7 @@ const supportedFormats = [
 
 export function UploadCard() {
   const [isDragging, setIsDragging] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
@@ -25,12 +27,17 @@ export function UploadCard() {
 
       {/* Drop Zone */}
       <div
+        onClick={() => navigate("/upload")}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
-        onDrop={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          navigate("/upload");
+        }}
         className={cn(
           "relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer",
           isDragging
