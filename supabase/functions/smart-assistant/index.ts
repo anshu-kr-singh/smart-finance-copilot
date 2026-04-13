@@ -6,28 +6,71 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are the Apna CA Smart Assistant — a conversational AI that helps Chartered Accountants manage their practice through natural language commands.
+const SYSTEM_PROMPT = `You are the Apna CA Smart Assistant — a SENIOR Chartered Accountant AI with 20+ years of equivalent expertise in Indian taxation, accounting, audit, and financial advisory.
 
-You can perform these actions:
-1. **Add Client** — When a user says things like "Add client ABC Corp", "Create new client with GSTIN...", "Register company XYZ"
-2. **Create Work Item** — When a user says "Create GST return for client X", "Add income tax work", "New audit work for ABC"
-3. **Answer Questions** — General CA/tax/accounting questions, status queries, etc.
-4. **Route to Agent** — When user needs specialized help (GST reconciliation, tax computation, audit), suggest opening the relevant agent.
+## CORE CAPABILITIES
+1. **Client Management** — Add clients, update details, list clients
+2. **Work Management** — Create work items (GST, Income Tax, Audit, Accounting, Compliance, FP&A, Risk, Advisory), track status
+3. **Domain Expert** — Deep knowledge of Indian tax law, GST, Income Tax, Company Law, Ind AS
+4. **Data Analysis** — When user shares data, analyze with step-by-step calculations
+5. **Agent Router** — Route specialized queries to domain agents automatically
 
-## RULES:
-- Extract ALL details from the user's message. If critical info is missing, ASK for it before acting.
-- For Add Client: Need at minimum company_name. Optional: gstin, pan, cin, contact_person, contact_email, contact_phone, address
-- For Create Work: Need client name/id, category (accounting/gst/income_tax/audit/compliance/fpa/risk/advisory), and title. Optional: description, due_date
-- Always confirm the action you're about to take before executing.
-- Use Indian business context (GSTIN format: 2-digit state + 10-char PAN + 1Z + 1 check digit)
-- Be professional, concise, and action-oriented.
-- When you detect intent to add a client or create work, use the provided tools.
-- If the query is about GST calculations, reconciliation, income tax, audit etc., suggest the user open the specialized agent for better results.
+## RESPONSE QUALITY STANDARDS
+- **ALWAYS** provide detailed, well-structured responses with proper formatting
+- Use tables (markdown) for comparisons, lists, and structured data
+- Use bullet points for key takeaways
+- Include relevant section/rule references for tax positions
+- For calculations: show step-by-step working with ₹ amounts in Indian format (lakhs/crores)
+- **NEVER** give vague answers — be specific with numbers, dates, and references
+- When asked about GST/IT/Audit, provide expert-level analysis with verification
 
-## RESPONSE STYLE:
-- Use ✅ for confirmations, 📋 for listing, ⚠ for warnings
-- Keep responses concise and actionable
-- After successful action, suggest next steps`;
+## SMART AGENT ROUTING
+When a user's query is domain-specific, include a routing suggestion:
+- GST queries (GSTR filing, ITC, reconciliation) → Suggest: "For detailed GST analysis, I recommend using the **GST Agent** 🔗"
+- Income Tax (computation, AIS, TDS, ITR) → Suggest: "For precise tax computation, try the **Income Tax Agent** 🔗"  
+- Audit (sampling, risk, anomaly detection) → Suggest: "For audit procedures, use the **Audit Assistant** 🔗"
+- Compliance (ROC, MCA, company law) → Suggest: "For compliance tracking, use the **Compliance Agent** 🔗"
+- Accounting (journal entries, reconciliation) → Suggest: "For bookkeeping tasks, use the **Accounting Agent** 🔗"
+- Advisory (ratios, forecasting, budgets) → Suggest: "For financial analysis, use the **FP&A Agent** 🔗"
+
+## DATA VISUALIZATION
+When presenting numerical data, suggest chart types:
+- Use "📊 **Chart suggestion:** [Bar/Line/Pie chart] for [data description]" 
+- Present data in table format that can be visualized
+- For trends over time → Line chart
+- For comparisons → Bar chart  
+- For proportions → Pie/Donut chart
+- For distributions → Histogram
+
+## INDIAN TAX QUICK REFERENCE (FY 2025-26)
+### GST
+- Rates: 0%, 5%, 12%, 18%, 28% (+Cess)
+- GSTR-1: 11th monthly / 13th quarterly
+- GSTR-3B: 20th monthly
+- ITC: Section 16(2) conditions mandatory
+
+### Income Tax (New Regime Default AY 2026-27)
+- 0-4L: Nil | 4-8L: 5% | 8-12L: 10% | 12-16L: 15% | 16-20L: 20% | 20-24L: 25% | 24L+: 30%
+- Standard deduction: ₹75,000 | Rebate u/s 87A: Up to ₹60,000
+
+### TDS Key Rates
+- 194A: 10% | 194C: 1%/2% | 194H: 5% | 194I: 2%/10% | 194J: 10%
+
+## RESPONSE FORMAT
+- Use ✅ for success, 📋 for lists, ⚠ for warnings, ❌ for errors, 💡 for tips
+- Always suggest next steps after completing an action
+- Be professional yet conversational
+- For complex queries, break response into sections with headers
+
+## VERIFICATION (for calculations)
+Always end calculation responses with:
+\`\`\`
+═══ VERIFICATION ═══
+□ Data processed: [count] ✓
+□ Sum check: [calculation] ✓  
+□ Accuracy: HIGH
+═══════════════════
+\`\`\``;
 
 const tools = [
   {
@@ -121,6 +164,19 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_dashboard_summary",
+      description: "Get a summary of the user's practice — total clients, work items by status, recent activity.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 async function executeToolCall(
@@ -134,7 +190,6 @@ async function executeToolCall(
       case "add_client": {
         const { company_name, gstin, pan, cin, contact_person, contact_email, contact_phone, address, financial_year_start } = args;
 
-        // Check if client already exists
         const { data: existing } = await supabaseAdmin
           .from("clients")
           .select("id, company_name")
@@ -164,7 +219,6 @@ async function executeToolCall(
 
         if (error) throw new Error(error.message);
 
-        // Log activity
         await supabaseAdmin.from("activity_logs").insert({
           user_id: userId,
           action: "create",
@@ -173,7 +227,6 @@ async function executeToolCall(
           details: { name: company_name, source: "smart_assistant" },
         });
 
-        // Create notification
         await supabaseAdmin.from("notifications").insert({
           user_id: userId,
           title: "Client Added",
@@ -194,7 +247,6 @@ async function executeToolCall(
       case "create_work_item": {
         const { client_name, category, title, description, due_date } = args;
 
-        // Find client
         const { data: clients } = await supabaseAdmin
           .from("clients")
           .select("id, company_name")
@@ -211,7 +263,6 @@ async function executeToolCall(
 
         const client = clients[0];
 
-        // Check subscription
         const { data: canCreate } = await supabaseAdmin.rpc("can_create_work_item", { p_user_id: userId });
 
         if (!canCreate) {
@@ -233,10 +284,8 @@ async function executeToolCall(
 
         if (error) throw new Error(error.message);
 
-        // Increment usage
         await supabaseAdmin.rpc("increment_work_items_used", { p_user_id: userId });
 
-        // Log activity
         await supabaseAdmin.from("activity_logs").insert({
           user_id: userId,
           action: "create",
@@ -245,7 +294,6 @@ async function executeToolCall(
           details: { name: title, category, client: client.company_name, source: "smart_assistant" },
         });
 
-        // Create notification
         await supabaseAdmin.from("notifications").insert({
           user_id: userId,
           title: "Work Item Created",
@@ -266,7 +314,7 @@ async function executeToolCall(
       case "list_clients": {
         const { data: clients } = await supabaseAdmin
           .from("clients")
-          .select("id, company_name, gstin, pan, contact_person")
+          .select("id, company_name, gstin, pan, contact_person, contact_email")
           .eq("user_id", userId)
           .order("company_name");
 
@@ -281,7 +329,7 @@ async function executeToolCall(
         const { client_name, status } = args;
         let query = supabaseAdmin
           .from("work_items")
-          .select("id, title, category, status, due_date, clients(company_name)")
+          .select("id, title, category, status, due_date, created_at, clients(company_name)")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(20);
@@ -347,6 +395,35 @@ async function executeToolCall(
         });
       }
 
+      case "get_dashboard_summary": {
+        const [clientsRes, workRes] = await Promise.all([
+          supabaseAdmin.from("clients").select("id", { count: "exact" }).eq("user_id", userId),
+          supabaseAdmin.from("work_items").select("id, status, category, title, due_date, clients(company_name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+        ]);
+
+        const workItems = workRes.data || [];
+        const statusCounts: Record<string, number> = {};
+        const categoryCounts: Record<string, number> = {};
+        workItems.forEach((w: any) => {
+          statusCounts[w.status] = (statusCounts[w.status] || 0) + 1;
+          categoryCounts[w.category] = (categoryCounts[w.category] || 0) + 1;
+        });
+
+        const overdue = workItems.filter((w: any) => w.due_date && new Date(w.due_date) < new Date() && !["completed", "filed"].includes(w.status));
+
+        return JSON.stringify({
+          success: true,
+          summary: {
+            total_clients: clientsRes.count || 0,
+            total_work_items: workItems.length,
+            by_status: statusCounts,
+            by_category: categoryCounts,
+            overdue_count: overdue.length,
+            overdue_items: overdue.slice(0, 5).map((w: any) => ({ title: w.title, due: w.due_date, client: w.clients?.company_name })),
+          },
+        });
+      }
+
       default:
         return JSON.stringify({ success: false, message: `Unknown function: ${functionName}` });
     }
@@ -374,7 +451,6 @@ serve(async (req) => {
       );
     }
 
-    // Auth
     const authHeader = req.headers.get("authorization");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -401,14 +477,16 @@ serve(async (req) => {
       );
     }
 
-    // Build messages
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...conversationHistory.slice(-10),
       { role: "user", content: message },
     ];
 
-    // First AI call - may return tool calls
+    // Use stronger model for complex queries
+    const isComplex = message.length > 300 || message.includes("reconcil") || message.includes("calculat") || message.includes("comput");
+    const model = isComplex ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -416,10 +494,11 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages,
         tools,
         stream: false,
+        max_tokens: 4096,
       }),
     });
 
@@ -440,18 +519,14 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     const choice = aiData.choices?.[0];
 
-    if (!choice) {
-      throw new Error("No response from AI");
-    }
+    if (!choice) throw new Error("No response from AI");
 
-    // Check for tool calls
     if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
       const toolResults: any[] = [];
 
       for (const toolCall of choice.message.tool_calls) {
         const fnName = toolCall.function.name;
         const fnArgs = JSON.parse(toolCall.function.arguments);
-
         const result = await executeToolCall(fnName, fnArgs, user.id, supabaseAdmin);
         toolResults.push({
           role: "tool",
@@ -460,7 +535,6 @@ serve(async (req) => {
         });
       }
 
-      // Second AI call with tool results for natural language response
       const followUpMessages = [
         ...messages,
         choice.message,
@@ -474,9 +548,10 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model,
           messages: followUpMessages,
           stream: true,
+          max_tokens: 4096,
         }),
       });
 
@@ -487,8 +562,7 @@ serve(async (req) => {
       });
     }
 
-    // No tool calls — stream the direct response
-    // Re-do the call with streaming
+    // No tool calls — stream direct response
     const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -496,9 +570,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages,
         stream: true,
+        max_tokens: 4096,
       }),
     });
 
